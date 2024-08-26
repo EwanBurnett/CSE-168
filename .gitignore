@@ -1,0 +1,20 @@
+# CSE-168 GitIgnore
+# Repository: https://github.com/EwanBurnett/CSE-168
+# Author: Ewan Burnett (EwanBurnettSK@Outlook.com)
+# Last Revised: 2024-08-26
+
+# Ignore Build Files
+[Bb][Uu][Ii][Ll][Dd]/
+[Oo][Uu][Tt]/
+
+# Ignore IDE Generated Files
+.vs/
+.cache/
+*.swp
+
+# Ignore Generated Resources
+*.jpg
+*.png 
+*.ppm
+
+*.spirv
