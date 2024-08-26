@@ -1,6 +1,6 @@
 # CSE 168 Computer Graphics II: Rendering
 
-Homework for the [EDX UC San Diego Rendering Course](https://learning.edx.org/course/course-v1:UCSanDiegoX+CSE168X+3T2024/home)
+Homework for the [EDX UC San Diego Rendering 2 Course](https://learning.edx.org/course/course-v1:UCSanDiegoX+CSE168X+3T2024/home)
 
 ## Build Instructions
 - Clone the Repository
