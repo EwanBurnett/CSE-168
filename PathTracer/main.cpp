@@ -2,6 +2,8 @@
 #include "Utils/Timer.h"
 #include "Maths.h"
 #include "Utils/ProgressBar.h"
+#include "Image.h"
+
 
 constexpr uint32_t NUM_MATRICES = 1 << 18; 
 
@@ -13,6 +15,15 @@ int main() {
     EDX::Maths::Matrix4x4<float>* mats_b = new EDX::Maths::Matrix4x4<float>[NUM_MATRICES]; 
     EDX::Maths::Matrix4x4<float>* result = new EDX::Maths::Matrix4x4<float>[NUM_MATRICES]; 
 
+    //Testing Image Exporting
+    EDX::Image img(300, 400); 
+    img.Clear({ 0x4c , 0x7f, 0x33, 0xff }); 
+    for (int x = 0; x < 300; x++) {
+        for (int y = 0; y < 200; y++) {
+            img.SetPixel(x, y, { 1.0f, 1.0f, 1.0f, 1.0f }); 
+        }
+    }
+    img.ExportToPNG("Test.png"); 
     
     //Initialisation
     {

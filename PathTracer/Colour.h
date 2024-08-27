@@ -10,30 +10,34 @@
 #include <cmath> 
 namespace EDX {
     /**
-     * @brief Represents a RGBA unorm colour (bounded [0..1]) 
+     * @brief Represents a RGBA unorm colour (bounded [0..1])
     */
     class Colour {
     public:
-        Colour(float r_ = 0.0, float g_ = 0.0, float b_ = 0.0, float a_ = 1.0) : r(r_), g(g_), b(b_), a(a_) {}
-        Colour(uint8_t r_ = 0, uint8_t g_ = 0, uint8_t b_ = 0, uint8_t a_ = 0xff) {
-            r = (float)0xff / (float)r_; 
-            g = (float)0xff / (float)g_; 
-            b = (float)0xff / (float)b_; 
-            a = (float)0xff / (float)a_; 
+        Colour() : r(0.0), g(0.0), b(0.0), a(1.0) {};
+        Colour(float r_, float g_, float b_, float a_) : r(r_), g(g_), b(b_), a(a_) {}
+        Colour(int r_, int g_, int b_, int a_) {
+            r = (float)r_ / (float)0xff;
+            g = (float)g_ / (float)0xff;
+            b = (float)b_ / (float)0xff;
+            a = (float)a_ / (float)0xff;
         }
 
         /**
          * @brief Returns a Gamma Corrected version of this colour
-         * @param gamma Gamma value. Recommended to be between 0.01 and 4.0. 
+         * @param gamma Gamma value. Recommended to be between 0.01 and 4.0.
         */
         Colour GammaCorrect(const float gamma) {
-            r = powf(r, gamma); 
-            g = powf(r, gamma); 
-            b = powf(r, gamma); 
-            a = powf(r, gamma); 
+            Colour out = {}; 
+            out.r = powf(r, gamma);
+            out.g = powf(g, gamma);
+            out.b = powf(b, gamma);
+            out.a = powf(a, gamma);
+
+            return out; 
         }
 
-        float r, g, b, a; 
+        float r, g, b, a;
     };
 }
 
