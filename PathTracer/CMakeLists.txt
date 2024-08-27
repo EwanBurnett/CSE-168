@@ -4,4 +4,15 @@
 
 project("PathTracer")
 
-add_executable(${PROJECT_NAME} "main.cpp" "Utils/Logger.h" "Utils/Logger.cpp" "Utils/Timer.h" "Utils/Timer.cpp" "Maths.h" "Maths/Utils.h" "Maths/Vector2.h"  "Maths/Vector3.h" "Maths/Vector4.h" "Maths/Matrix.h" "Maths/Quaternion.h")
+include(FetchContent)
+
+# stb image library
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+)
+
+FetchContent_MakeAvailable(stb)
+
+add_executable(${PROJECT_NAME} "main.cpp" "Utils/Logger.h" "Utils/Logger.cpp" "Utils/Timer.h" "Utils/Timer.cpp" "Maths.h" "Maths/Utils.h" "Maths/Vector2.h"  "Maths/Vector3.h" "Maths/Vector4.h" "Maths/Matrix.h" "Maths/Quaternion.h" "Colour.h" "Utils/ProgressBar.h")
+target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR})

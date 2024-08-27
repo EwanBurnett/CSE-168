@@ -1,8 +1,9 @@
 #include "Utils/Logger.h"
 #include "Utils/Timer.h"
 #include "Maths.h"
+#include "Utils/ProgressBar.h"
 
-constexpr uint32_t NUM_MATRICES = 1 << 20; 
+constexpr uint32_t NUM_MATRICES = 1 << 18; 
 
 int main() {
     EDX::Log::Status("Computing %d matrix multiplications.\n", NUM_MATRICES);
@@ -15,32 +16,37 @@ int main() {
     
     //Initialisation
     {
-        EDX::Timer timer; 
-        timer.Start(); 
+        EDX::Log::Status("Initializing...\n");
+        EDX::ProgressBar pb;
         
         for (uint32_t i = 0; i < NUM_MATRICES; i++) {
             double degrees = (static_cast<double>(i) / static_cast<double>(NUM_MATRICES)) * 360.0; 
             mats_a[i] = EDX::Maths::Matrix4x4<float>::XRotationFromDegrees(degrees);
             mats_b[i] = EDX::Maths::Matrix4x4<float>::ZRotationFromDegrees(degrees);
-        }
-        timer.Tick(); 
 
-        const double initialization_time_s = timer.DeltaTime(); 
-        EDX::Log::Success("Initialization Complete in %.8fs.\n", initialization_time_s); 
+            float p = (float)i / (float)NUM_MATRICES; 
+            pb.Update(p); 
+        }
+
+        const double initialization_time_s = pb.GetProgressTimer().Duration();
+        EDX::Log::Success("\nInitialization Complete in %.8fs.\n", initialization_time_s); 
     }
 
     //Computation
+    //For now, we'll use this to simulate doing some work, i.e. Rendering an image.  
     {
-        EDX::Timer timer; 
-        timer.Start(); 
+        EDX::Log::Status("Computing Data...\n");
+        EDX::ProgressBar pb;
 
         for (uint32_t i = 0; i < NUM_MATRICES; i++) {
-            result[i] = mats_a[i] * mats_b[i]; 
-        }
-        timer.Tick(); 
 
-        const double computation_time_s = timer.DeltaTime(); 
-        EDX::Log::Success("Computation Complete in %.8fs.\n", computation_time_s); 
+            result[i] = mats_a[i] * mats_b[i]; 
+            float p = (float)i / (float)NUM_MATRICES; 
+            pb.Update(p); 
+        }
+
+        const double computation_time_s = pb.GetProgressTimer().Duration();
+        EDX::Log::Success("\nComputation Complete in %.8fs.\n", computation_time_s); 
     }
 
     //Clean-up
