@@ -27,7 +27,7 @@ namespace EDX {
          * @brief Returns a Gamma Corrected version of this colour
          * @param gamma Gamma value. Recommended to be between 0.01 and 4.0.
         */
-        Colour GammaCorrect(const float gamma) {
+        inline Colour GammaCorrect(const float gamma) {
             Colour out = {}; 
             out.r = powf(r, gamma);
             out.g = powf(g, gamma);
