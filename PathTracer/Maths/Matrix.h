@@ -1,4 +1,4 @@
-#ifndef __MATHS__MATRIX_H
+#ifndef __MATHS_MATRIX_H
 #define __MATHS_MATRIX_H
 /**
 * @file Matrix.h
@@ -197,7 +197,7 @@ namespace EDX {
             }
 
             inline static Matrix4x4 View(Vector3<T> origin, Vector3<T> forwards = Vector3<T>::Forwards(), Vector3<T> right = Vector3<T>::Right(), Vector3<T> up = Vector3<T>::Up()) {
-                Orthonormalize(forwards, up, right);
+                Vector3<T>::Orthonormalize(forwards, up, right);
 
                 Vector3<T> position = {
                     static_cast<T>(origin.Dot(right)),

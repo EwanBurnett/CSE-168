@@ -26,10 +26,70 @@ EDX::Camera::Camera(Maths::Vector3f& lookFrom, Maths::Vector3f& lookAt, Maths::V
 {
     m_Position = lookFrom; 
 
-    m_Forwards = Maths::Vector3f::Normalize(lookAt - lookFrom); 
-    m_Up = up; 
+    m_Forwards = Maths::Vector3f::Normalize(lookFrom - lookAt);
+    m_Up = up;
     m_Right = Maths::Vector3f::Cross(m_Forwards, m_Up); 
+
     Maths::Vector3f::Orthonormalize(m_Forwards, m_Up, m_Right); 
 
     m_FoVRadians = FoVRadians; 
+}
+
+EDX::Maths::Vector3f EDX::Camera::GetPosition()
+{
+    return m_Position; 
+}
+
+void EDX::Camera::SetPosition(Maths::Vector3f& position)
+{
+    m_Position = position; 
+}
+
+EDX::Maths::Vector3f EDX::Camera::GetForwardsVector()
+{
+    return m_Forwards; 
+}
+
+EDX::Maths::Vector3f EDX::Camera::GetUpVector()
+{
+    return m_Up;
+}
+
+EDX::Maths::Vector3f EDX::Camera::GetRightVector()
+{
+    return m_Right;
+}
+
+EDX::Maths::Matrix4x4<float> EDX::Camera::GetViewMatrix()
+{
+    return Maths::Matrix4x4<float>::View(m_Position, m_Forwards, m_Right, m_Up);
+}
+
+void EDX::Camera::Orbit(Maths::Vector3f& focus, float theta, float phi, float radius)
+{
+    m_Position.x = radius * sinf(phi) * cosf(theta); 
+    m_Position.y = radius * sinf(phi) * cosf(theta); 
+    m_Position.z = radius * cosf(phi); 
+
+    m_Up = Maths::Vector3f::Up(); 
+    m_Forwards = Maths::Vector3f::Normalize(m_Position - focus) * -1.0f; 
+    m_Right = Maths::Vector3f::Cross(m_Forwards, m_Up); 
+    
+    Maths::Vector3f::Orthonormalize(m_Forwards, m_Up, m_Right); 
+}
+
+void EDX::Camera::Look(float dx, float dy, float speed)
+{
+    //TODO: first-person camera logic
+}
+
+void EDX::Camera::Walk(Maths::Vector3f& direction, float speed)
+{
+    Maths::Vector3f dir = {}; 
+    dir += direction * m_Forwards; 
+    dir += direction * m_Up; 
+    dir += direction * m_Right; 
+    dir = dir.Normalize(); 
+
+    m_Position += dir * speed; 
 }
