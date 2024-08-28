@@ -23,18 +23,12 @@ int main() {
     EDX::Maths::Vector3f up = { 0.0f, 1.0f, 0.0f };
 
     EDX::Camera camera(lookFrom, lookAt, up, EDX::Maths::DegToRad(60.0));
-
-    //Render
     {
         EDX::Log::Status("Rendering...\n");
         EDX::ProgressBar pb;
 
         //Shoot rays through the center of each pixel, adding 0.5 offset to x and y with respect to the image aspect ratio. 
         const float aspectRatio = (float)WIDTH / (float)HEIGHT;
-
-        //Compute the top-leftmost pixel coordinates
-        const float tlX = -static_cast<float>(WIDTH) / 2.0f;
-        const float tlY = -static_cast<float>(HEIGHT) / 2.0f;
 
         const float FoVX = (2.0f * atan(tan(camera.GetFoVRadians() * 0.5f) * aspectRatio)); //Compute Horizontal FoV wrt Vertical FoV and Aspect Ratio
         const float FoVY = camera.GetFoVRadians();
@@ -58,17 +52,45 @@ int main() {
                 //Solve the quadratic to compute intersection
                 //For now, just shade it as a solid colour. 
                 {
-                    const EDX::Maths::Vector3f sphere_pos = { 0.0, 0.0, 10.0 };
+                    //Testing Transformations
+                    const EDX::Maths::Matrix4x4<float> world = EDX::Maths::Matrix4x4<float>::Scaling({ 1.0f, 2.0f, 1.0f });// *EDX::Maths::Matrix4x4<float>::YRotationFromDegrees(6.0f)*
+                        //EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, -10.0f });
+                    
+
+                    EDX::Maths::Vector4f r_t_o = { r.Origin().x, r.Origin().y, r.Origin().z, 1.0f };
+                    EDX::Maths::Vector4f r_t_d = { r.Direction().x, r.Direction().y, r.Direction().z, 1.0f };
+
+                    bool inv = false;
+                    auto inverse = EDX::Maths::Matrix4x4<float>::Inverse(world, inv); 
+                    r_t_o = r_t_o * inverse;
+                    r_t_d = r_t_d * inverse;
+
+                    EDX::Ray r2({ r_t_o.x, r_t_o.y, r_t_o.z }, EDX::Maths::Vector3f::Normalize({ r_t_d.x, r_t_d.y, r_t_d.z })); 
+                    
+                    const EDX::Maths::Vector3f sphere_pos = { 0.0, 0.0, -18.0 };
                     const float sphere_radius = 1.0f;
 
-                    EDX::Maths::Vector3f toCenter = sphere_pos - r.Origin();
-                    const float a = EDX::Maths::Vector3f::Dot(r.Direction(), r.Direction());
-                    const float b = -2.0f * EDX::Maths::Vector3f::Dot(r.Direction(), toCenter);
+                    EDX::Maths::Vector3f toCenter = sphere_pos - r2.Origin();
+                    const float a = EDX::Maths::Vector3f::Dot(r2.Direction(), r2.Direction());
+                    const float b = -2.0f * EDX::Maths::Vector3f::Dot(r2.Direction(), toCenter);
                     const float c = EDX::Maths::Vector3f::Dot(toCenter, toCenter) - (sphere_radius * sphere_radius);
 
                     const float discriminant = b * b - 4 * a * c;
                     if (discriminant >= 0.0) {
-                        clr = { 1.0f, 0.0f, 0.0f, 1.0f };
+
+                        float tmin = (-b - sqrtf(discriminant)) / 2.0f * a;
+                        float tmax = (-b + sqrtf(discriminant)) / 2.0f * a;
+
+                        if (tmin > tmax) {
+                            std::swap(tmin, tmax);
+                        }
+
+                        auto n = r2.At(tmin) - sphere_pos;
+                        n = n.Normalize();
+
+                        if (tmin > 0.0) {
+                            clr = { n.x, n.y, n.z, 1.0f };  //Display the normal, for Debugging. 
+                        }
                     }
                 }
 

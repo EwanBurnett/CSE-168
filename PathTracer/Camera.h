@@ -32,7 +32,7 @@ namespace EDX {
 
         Maths::Matrix4x4<float> GetViewMatrix() const; 
 
-        void Orbit(Maths::Vector3f& focus, float theta, float phi, float radius);
+        void Orbit(Maths::Vector3f& focus, float phi, float theta, float radius);
         void Look(float dx, float dy, float speed);
         void Walk(Maths::Vector3f& direction, float speed); 
 
