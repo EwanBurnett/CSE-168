@@ -19,10 +19,10 @@ int main() {
     EDX::Image img(WIDTH, HEIGHT);
 
     EDX::Maths::Vector3f lookFrom = { 0.0f, 0.0f, 0.0f };
-    EDX::Maths::Vector3f lookAt = { 0.0f, 0.0f, 1.0f };
+    EDX::Maths::Vector3f lookAt = { 0.0f, 0.0f, 10.0f };
     EDX::Maths::Vector3f up = { 0.0f, 1.0f, 0.0f };
 
-    EDX::Camera camera(lookFrom, lookAt, up, EDX::Maths::DegToRad(90.0));
+    EDX::Camera camera(lookFrom, lookAt, up, EDX::Maths::DegToRad(60.0));
 
     //Render
     {
@@ -31,48 +31,54 @@ int main() {
 
         //Shoot rays through the center of each pixel, adding 0.5 offset to x and y with respect to the image aspect ratio. 
         const float aspectRatio = (float)WIDTH / (float)HEIGHT;
-        const EDX::Maths::Vector2f pixelDelta = EDX::Maths::Vector2f{ 1.0f, 1.0f };    //UV Pixel Delta = {AR / 2, 0.5}
 
         //Compute the top-leftmost pixel coordinates
         const float tlX = -static_cast<float>(WIDTH) / 2.0f;
         const float tlY = -static_cast<float>(HEIGHT) / 2.0f;
 
-        EDX::Maths::Matrix4x4<float> view = camera.GetViewMatrix();
+        const float FoVX = (2.0f * atan(tan(camera.GetFoVRadians() * 0.5f) * aspectRatio)); //Compute Horizontal FoV wrt Vertical FoV and Aspect Ratio
+        const float FoVY = camera.GetFoVRadians();
 
         //Render the Image
         for (uint32_t y = 0; y < HEIGHT; y++) {
             for (uint32_t x = 0; x < WIDTH; x++) {
-                EDX::Maths::Vector4f rayDirection = {
-                    tlX + (pixelDelta.x * x),  
-                    tlY + (pixelDelta.y * y),
-                    0.0f,
-                    0.0f
-                };
+                EDX::Colour clr = {};
 
-                //Orient the ray to the camera's view.
+                const float alpha = tan(FoVX / 2.0f) * ((x - ((float)WIDTH / 2.0f)) / (float)WIDTH / 2.0f);
+                const float beta = tan(FoVY / 2.0f) * ((((float)HEIGHT / 2.0f) - y) / (float)HEIGHT / 2.0f);
+
+                EDX::Maths::Vector3f rayDirection;
+                rayDirection = (alpha * camera.GetRightVector()) + (beta * camera.GetUpVector()) + camera.GetForwardsVector();
                 rayDirection = rayDirection.Normalize();
-                rayDirection = rayDirection * view;
 
-                auto dir = camera.GetForwardsVector() + EDX::Maths::Vector3f{ rayDirection.x, rayDirection.y, rayDirection.z };
-                dir = dir.Normalize();
 
-                EDX::Ray r(camera.GetPosition(), dir); //TODO: Trace Rays into a Scene...
+                EDX::Ray r(camera.GetPosition(), rayDirection);
 
-                auto f = r.At(600.0f);
-                EDX::Colour c = {};
+                //Intersect with a debug sphere. 
+                //Solve the quadratic to compute intersection
+                //For now, just shade it as a solid colour. 
+                {
+                    const EDX::Maths::Vector3f sphere_pos = { 0.0, 0.0, 10.0 };
+                    const float sphere_radius = 1.0f;
 
-                //for now, Simulate rendering with UVs. 
-                //NOTE: By convention, coord [0, 0] is the top-left corner of the image!! 
-                //c = { (float)(x) / (float)(WIDTH), (float)(y) / (float)(HEIGHT), 0.0f, 1.0f }; // UV Output
+                    EDX::Maths::Vector3f toCenter = sphere_pos - r.Origin();
+                    const float a = EDX::Maths::Vector3f::Dot(r.Direction(), r.Direction());
+                    const float b = -2.0f * EDX::Maths::Vector3f::Dot(r.Direction(), toCenter);
+                    const float c = EDX::Maths::Vector3f::Dot(toCenter, toCenter) - (sphere_radius * sphere_radius);
 
-                //Output ray direction, for debugging
-                //c = { r.Direction().x, r.Direction().y, r.Direction().z, 1.0f};
-                c = { r.Direction().x, r.Direction().y, 0.0f, 1.0f };
-                //c = { r.Direction().x, 0.0f, 0.0f, 1.0f};
-                //c = { 0.0f, r.Direction().y, 0.0f, 1.0f};
-                //c = { 0.0f, 0.0f, r.Direction().z, 1.0f};
+                    const float discriminant = b * b - 4 * a * c;
+                    if (discriminant >= 0.0) {
+                        clr = { 1.0f, 0.0f, 0.0f, 1.0f };
+                    }
+                }
 
-                img.SetPixel(x, y, c);
+                //Clamp the pixel colour to [0, 1]
+                clr.r = EDX::Maths::Clamp(clr.r, 0.0f, 1.0f);
+                clr.g = EDX::Maths::Clamp(clr.g, 0.0f, 1.0f);
+                clr.b = EDX::Maths::Clamp(clr.b, 0.0f, 1.0f);
+                clr.a = EDX::Maths::Clamp(clr.a, 0.0f, 1.0f);
+
+                img.SetPixel(x, y, clr);
             }
 
             //Only update the progress bar in the outer part of the loop, as it's SLOW. 

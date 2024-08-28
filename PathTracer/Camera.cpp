@@ -35,7 +35,7 @@ EDX::Camera::Camera(Maths::Vector3f& lookFrom, Maths::Vector3f& lookAt, Maths::V
     m_FoVRadians = FoVRadians; 
 }
 
-EDX::Maths::Vector3f EDX::Camera::GetPosition()
+EDX::Maths::Vector3f EDX::Camera::GetPosition() const
 {
     return m_Position; 
 }
@@ -45,22 +45,37 @@ void EDX::Camera::SetPosition(Maths::Vector3f& position)
     m_Position = position; 
 }
 
-EDX::Maths::Vector3f EDX::Camera::GetForwardsVector()
+EDX::Maths::Vector3f EDX::Camera::GetForwardsVector() const
 {
     return m_Forwards; 
 }
 
-EDX::Maths::Vector3f EDX::Camera::GetUpVector()
+EDX::Maths::Vector3f EDX::Camera::GetUpVector() const
 {
     return m_Up;
 }
 
-EDX::Maths::Vector3f EDX::Camera::GetRightVector()
+EDX::Maths::Vector3f EDX::Camera::GetRightVector() const
 {
     return m_Right;
 }
 
-EDX::Maths::Matrix4x4<float> EDX::Camera::GetViewMatrix()
+float EDX::Camera::GetFoVRadians() const
+{
+    return m_FoVRadians; 
+}
+
+void EDX::Camera::SetFoVRadians(const float FoVRadians)
+{
+    m_FoVRadians = FoVRadians;
+}
+
+void EDX::Camera::SetFoVDegrees(const float FoVDegrees)
+{
+    m_FoVRadians = Maths::DegToRad(FoVDegrees); 
+}
+
+EDX::Maths::Matrix4x4<float> EDX::Camera::GetViewMatrix() const
 {
     return Maths::Matrix4x4<float>::View(m_Position, m_Forwards, m_Right, m_Up);
 }
