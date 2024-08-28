@@ -9,6 +9,7 @@
 #include <limits>
 #include <cmath>
 #include <cfloat>
+#include <algorithm>
 
 namespace EDX {
     namespace Maths {
@@ -111,6 +112,26 @@ namespace EDX {
             return y;
         }
 
+
+        inline bool SolveQuadratic(const float a, const float b, const float c, float& tmin, float& tmax) {
+
+            const float discriminant = b * b - 4 * a * c;
+            if (discriminant < 0.0) {
+                return false; //There are no valid roots, so just return. 
+            }
+
+            float min = (-b - sqrtf(discriminant)) / 2.0f * a;
+            float max = (-b + sqrtf(discriminant)) / 2.0f * a;
+
+            if (min > max) {
+                std::swap(tmin, tmax);
+            }
+
+            tmin = min; 
+            tmax = max; 
+
+            return true;
+        }
     }
 }
 
