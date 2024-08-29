@@ -5,6 +5,7 @@
 #include "Ray.h"
 #include "Camera.h"
 #include "Primitives/Sphere.h"
+#include "Primitives/Triangle.h"
 #include "Primitives/Plane.h"
 #include <chrono> 
 #include <filesystem>
@@ -51,6 +52,11 @@ int main() {
                 EDX::Ray r(camera.GetPosition(), rayDirection);
 
                 EDX::Plane planes[1] = { {{0.0f, 1.0f,-1.0f},{0.0f, 0.0f,100.0f}} };
+                EDX::Triangle triangles[1] = { 
+                    {
+                        {-1.0f, 0.0f,10.0f},{1.0f, 0.0f,10.0f}, {0.0f, 1.0f,10.0f}
+                    } 
+                };
                 EDX::Sphere spheres[2]{ { { 12.6f, 1.0f, 60.0f }, 1.4f },{ { 0.0f, 0.0f, 10.0f }, 1.0f } }; //For now, this can be our "Scene". 
                 //Test Intersection in the scene
                 {
@@ -66,6 +72,17 @@ int main() {
                             }
                         }
                     }
+                    for (int i = 0; i < 1; i++)
+                    {
+                        EDX::RayHit l_result = {};
+                        if (triangles[i].Intersects(r, l_result)) {
+                            if (nearest < l_result.t) {
+                                nearest = l_result.t;
+                                result = l_result;
+                            }
+                        }
+                    }
+
                     for (int i = 0; i < 2; i++) {
                         EDX::RayHit l_result = {};
                         if (spheres[i].Intersects(r, l_result)) {
