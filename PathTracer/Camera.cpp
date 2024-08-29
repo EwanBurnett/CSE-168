@@ -26,11 +26,12 @@ EDX::Camera::Camera(Maths::Vector3f& lookFrom, Maths::Vector3f& lookAt, Maths::V
 {
     m_Position = lookFrom;
 
-    m_Forwards = Maths::Vector3f::Normalize(lookFrom - lookAt);
-    m_Up = up;
-    m_Right = Maths::Vector3f::Cross(m_Forwards, m_Up);
+    m_Forwards = -Maths::Vector3f::Normalize(lookFrom - lookAt);
+    m_Right = Maths::Vector3f::Cross(up, m_Forwards).Normalize();
+    m_Up = Maths::Vector3f::Cross( m_Forwards, m_Right).Normalize();
 
-    Maths::Vector3f::Orthonormalize(m_Forwards, m_Up, m_Right);
+
+   // Maths::Vector3f::Orthonormalize(m_Forwards, m_Up, m_Right);
 
     m_FoVRadians = FoVRadians;
 }

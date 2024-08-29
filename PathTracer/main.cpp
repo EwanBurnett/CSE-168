@@ -5,6 +5,7 @@
 #include "Ray.h"
 #include "Camera.h"
 #include "Primitives/Sphere.h"
+#include "Primitives/Plane.h"
 #include <chrono> 
 #include <filesystem>
 
@@ -39,23 +40,23 @@ int main() {
             for (uint32_t x = 0; x < WIDTH; x++) {
                 EDX::Colour clr = {};
 
-                const float alpha = tan(FoVX / 2.0f) * ((x - ((float)WIDTH / 2.0f)) / (float)WIDTH / 2.0f);
-                const float beta = tan(FoVY / 2.0f) * ((((float)HEIGHT / 2.0f) - y) / (float)HEIGHT / 2.0f);
+                const float alpha = tan(FoVX / 2.0f) * ((((float)WIDTH / 2.0f) - x) / (float)WIDTH / 2.0f);
+                const float beta = tan(FoVY / 2.0f) * ((y - ((float)HEIGHT / 2.0f)) / (float)HEIGHT / 2.0f);
 
                 EDX::Maths::Vector3f rayDirection;
-                rayDirection = (alpha * camera.GetRightVector()) + (beta * camera.GetUpVector()) + camera.GetForwardsVector();
+                rayDirection = (alpha * camera.GetRightVector()) + (beta * camera.GetUpVector()) - camera.GetForwardsVector();
                 rayDirection = rayDirection.Normalize();
 
 
                 EDX::Ray r(camera.GetPosition(), rayDirection);
 
                 EDX::Plane planes[1] = { {{0.0f, 1.0f,0.0f}, -10.0f} };
-                EDX::Sphere spheres[2]{ { { 12.6f, -0.5f, -60.0f }, 1.4f },{ { 0.0f, 0.9f, -10.0f }, 1.0f } }; //For now, this can be our "Scene". 
+                EDX::Sphere spheres[2]{ { { 12.6f, -3.5f, 60.0f }, 1.4f },{ { 0.0f, 0.0f, 10.0f }, 1.0f } }; //For now, this can be our "Scene". 
                 //Test Intersection in the scene
                 {
                     EDX::RayHit result = {};
                     float nearest = -EDX::Maths::Infinity;  //We only care about the nearest hit. 
-                    for (int i = 0; i < 1; i++)
+                    for (int i = 0; i < 0; i++)
                     {
                         EDX::RayHit l_result = {};
                         if (planes[i].Intersects(r, l_result)) {
@@ -70,7 +71,7 @@ int main() {
                         if (spheres[i].Intersects(r, l_result)) {
                             if (nearest < l_result.t) {
                                 nearest = l_result.t;
-                                result = l_result; 
+                                result = l_result;
                             }
                         }
                     }

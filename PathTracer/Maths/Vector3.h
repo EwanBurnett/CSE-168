@@ -100,13 +100,13 @@ namespace EDX {
              * @brief Equivalent to Vector3<T>(0, 0, 1)
              * @return A direction Vector pointing Forwards
             */
-            inline static constexpr Vector3<T> Forwards() { return{ static_cast<T>(0.0), static_cast<T>(0.0), static_cast<T>(1.0) }; }
+            inline static constexpr Vector3<T> Forwards() { return{ static_cast<T>(0.0), static_cast<T>(0.0), static_cast<T>(-1.0) }; }
 
             /**
              * @brief Equivalent to Vector3<T>(0, 0, -1)
              * @return A direction Vector pointing Backwards
             */
-            inline static constexpr Vector3<T> Backwards() { return{ static_cast<T>(0.0), static_cast<T>(0.0), static_cast<T>(-1.0) }; }
+            inline static constexpr Vector3<T> Backwards() { return{ static_cast<T>(0.0), static_cast<T>(0.0), static_cast<T>(1.0) }; }
 
             /**
              * @brief Computes the dot product of two vectors.
