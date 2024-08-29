@@ -21,11 +21,22 @@ int main() {
     //Resource Allocation
     EDX::Image img(WIDTH, HEIGHT);
 
-    EDX::Maths::Vector3f lookFrom = { 0.0f, 0.1f, 0.0f };
+    EDX::Maths::Vector3f lookFrom = { 0.0f,0.0f, 0.0f };
     EDX::Maths::Vector3f lookAt = { 0.0f, 0.0f, 10.0f };
     EDX::Maths::Vector3f up = { 0.0f, 1.0f, 0.0f };
 
-    EDX::Camera camera(lookFrom, lookAt, up, EDX::Maths::DegToRad(60.0));
+    EDX::Plane planes[1] = { {{0.0f, 0.0f,-1.0f},{0.0f, 0.0f,100.0f}} };
+    std::vector<EDX::Triangle> triangles;
+    for (int i = 0; i < 100; i++)
+    {
+        triangles.push_back({
+            {i * -1.0f, i * 0.0f, i * 10.0f}, { i * 1.0f,i * 0.0f,i * 10.0f }, { i * 0.0f, i * 1.0f,i * 10.0f }
+            });
+    };
+    EDX::Sphere spheres[2]{ { { 12.6f, 1.0f, 60.0f }, 1.4f },{ { 0.0f, 0.0f, 10.0f }, 1.0f } }; //For now, this can be our "Scene". 
+
+
+    EDX::Camera camera(lookFrom, lookAt, up, EDX::Maths::DegToRad(90.0));
     {
         EDX::Log::Status("Rendering...\n");
         EDX::ProgressBar pb;
@@ -51,13 +62,6 @@ int main() {
 
                 EDX::Ray r(camera.GetPosition(), rayDirection);
 
-                EDX::Plane planes[1] = { {{0.0f, 1.0f,-1.0f},{0.0f, 0.0f,100.0f}} };
-                EDX::Triangle triangles[1] = { 
-                    {
-                        {-1.0f, 0.0f,10.0f},{1.0f, 0.0f,10.0f}, {0.0f, 1.0f,10.0f}
-                    } 
-                };
-                EDX::Sphere spheres[2]{ { { 12.6f, 1.0f, 60.0f }, 1.4f },{ { 0.0f, 0.0f, 10.0f }, 1.0f } }; //For now, this can be our "Scene". 
                 //Test Intersection in the scene
                 {
                     EDX::RayHit result = {};
@@ -72,7 +76,7 @@ int main() {
                             }
                         }
                     }
-                    for (int i = 0; i < 1; i++)
+                    for (int i = 0; i < triangles.size(); i++)
                     {
                         EDX::RayHit l_result = {};
                         if (triangles[i].Intersects(r, l_result)) {
@@ -82,7 +86,6 @@ int main() {
                             }
                         }
                     }
-
                     for (int i = 0; i < 2; i++) {
                         EDX::RayHit l_result = {};
                         if (spheres[i].Intersects(r, l_result)) {
@@ -92,7 +95,18 @@ int main() {
                             }
                         }
                     }
-                    clr = { result.normal.x, result.normal.y,  result.normal.z, 1.0f };
+
+                    //Apply constant shading
+                    EDX::Maths::Vector3f lightDir = { 0.0, 1.0, -2.0 };
+                    lightDir = lightDir.Normalize();
+
+                    float n_dot_l = result.normal.Dot(-lightDir);
+                    EDX::Colour k_Ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
+                    EDX::Colour k_Light = { 1.0f, 0.0f, 0.0f, 1.0f };
+                    clr = clr + k_Ambient;
+                    clr = clr + EDX::Colour{ k_Light.r* n_dot_l, k_Light.g* n_dot_l, k_Light.b* n_dot_l, k_Light.a };
+
+                    //clr = { result.normal.x, result.normal.y,  result.normal.z, 1.0f };
                     //clr = { result.point.x, result.point.y,  result.point.z, 1.0f };
                 }
 

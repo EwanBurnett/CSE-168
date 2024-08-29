@@ -23,18 +23,24 @@ namespace EDX {
             a = (float)a_ / (float)0xff;
         }
 
+        friend Colour operator +(Colour lhs, const Colour& rhs) { return { lhs.r + rhs.r, lhs.g + rhs.g ,lhs.b + rhs.b, lhs.a + rhs.a }; }
+        friend Colour operator -(Colour lhs, const Colour& rhs) { return { lhs.r - rhs.r, lhs.g - rhs.g ,lhs.b - rhs.b, lhs.a - rhs.a }; }
+        friend Colour operator *(Colour lhs, const Colour& rhs) { return { lhs.r * rhs.r, lhs.g * rhs.g ,lhs.b * rhs.b, lhs.a * rhs.a }; }
+        friend Colour operator /(Colour lhs, const Colour& rhs) { return { lhs.r / rhs.r, lhs.g / rhs.g ,lhs.b / rhs.b, lhs.a / rhs.a }; }
+
+
         /**
          * @brief Returns a Gamma Corrected version of this colour
          * @param gamma Gamma value. Recommended to be between 0.01 and 4.0.
         */
         inline Colour GammaCorrect(const float gamma) {
-            Colour out = {}; 
+            Colour out = {};
             out.r = powf(r, gamma);
             out.g = powf(g, gamma);
             out.b = powf(b, gamma);
             out.a = powf(a, gamma);
 
-            return out; 
+            return out;
         }
 
         float r, g, b, a;
