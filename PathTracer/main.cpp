@@ -49,11 +49,22 @@ int main() {
 
                 EDX::Ray r(camera.GetPosition(), rayDirection);
 
-                EDX::Sphere spheres[2]{ { { 0.6f, 0.0f, 6.0f }, 0.4f },{ { 0.0f, 0.0f, 10.0f }, 1.0f }}; //For now, this can be our "Scene". 
+                EDX::Plane planes[1] = { {{0.0f, 1.0f,0.0f}, -10.0f} };
+                EDX::Sphere spheres[2]{ { { 12.6f, -0.5f, -60.0f }, 1.4f },{ { 0.0f, 0.9f, -10.0f }, 1.0f } }; //For now, this can be our "Scene". 
                 //Test Intersection in the scene
                 {
                     EDX::RayHit result = {};
                     float nearest = -EDX::Maths::Infinity;  //We only care about the nearest hit. 
+                    for (int i = 0; i < 1; i++)
+                    {
+                        EDX::RayHit l_result = {};
+                        if (planes[i].Intersects(r, l_result)) {
+                            if (nearest < l_result.t) {
+                                nearest = l_result.t;
+                                result = l_result;
+                            }
+                        }
+                    }
                     for (int i = 0; i < 2; i++) {
                         EDX::RayHit l_result = {};
                         if (spheres[i].Intersects(r, l_result)) {

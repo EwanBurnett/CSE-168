@@ -116,7 +116,7 @@ namespace EDX {
         inline bool SolveQuadratic(const float a, const float b, const float c, float& tmin, float& tmax) {
 
             const float discriminant = b * b - 4 * a * c;
-            if (discriminant < 0.0) {
+            if (discriminant < 0.0f) {
                 return false; //There are no valid roots, so just return. 
             }
 
