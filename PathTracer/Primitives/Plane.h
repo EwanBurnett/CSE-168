@@ -9,16 +9,15 @@ namespace EDX {
 
     class Plane {
     public: 
-        Plane(Maths::Vector3f normal, float offset); 
+        Plane(Maths::Vector3f normal, Maths::Vector3f position); 
 
         bool Intersects(Ray ray, RayHit& hitResult);
 
         void SetNormal(Maths::Vector3f normal);
-        void SetOffset(float offset); 
 
     private: 
         Maths::Vector3f m_Normal; 
-        float m_Offset; 
+        Maths::Vector3f m_Position; 
 
     };
 }

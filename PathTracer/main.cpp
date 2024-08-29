@@ -20,7 +20,7 @@ int main() {
     //Resource Allocation
     EDX::Image img(WIDTH, HEIGHT);
 
-    EDX::Maths::Vector3f lookFrom = { 0.0f, 0.0f, 0.0f };
+    EDX::Maths::Vector3f lookFrom = { 0.0f, 0.1f, 0.0f };
     EDX::Maths::Vector3f lookAt = { 0.0f, 0.0f, 10.0f };
     EDX::Maths::Vector3f up = { 0.0f, 1.0f, 0.0f };
 
@@ -50,13 +50,13 @@ int main() {
 
                 EDX::Ray r(camera.GetPosition(), rayDirection);
 
-                EDX::Plane planes[1] = { {{0.0f, 1.0f,0.0f}, -10.0f} };
-                EDX::Sphere spheres[2]{ { { 12.6f, -3.5f, 60.0f }, 1.4f },{ { 0.0f, 0.0f, 10.0f }, 1.0f } }; //For now, this can be our "Scene". 
+                EDX::Plane planes[1] = { {{0.0f, 1.0f,-1.0f},{0.0f, 0.0f,100.0f}} };
+                EDX::Sphere spheres[2]{ { { 12.6f, 1.0f, 60.0f }, 1.4f },{ { 0.0f, 0.0f, 10.0f }, 1.0f } }; //For now, this can be our "Scene". 
                 //Test Intersection in the scene
                 {
                     EDX::RayHit result = {};
                     float nearest = -EDX::Maths::Infinity;  //We only care about the nearest hit. 
-                    for (int i = 0; i < 0; i++)
+                    for (int i = 0; i < 1; i++)
                     {
                         EDX::RayHit l_result = {};
                         if (planes[i].Intersects(r, l_result)) {
@@ -76,6 +76,7 @@ int main() {
                         }
                     }
                     clr = { result.normal.x, result.normal.y,  result.normal.z, 1.0f };
+                    //clr = { result.point.x, result.point.y,  result.point.z, 1.0f };
                 }
 
                 //Clamp the pixel colour to [0, 1]

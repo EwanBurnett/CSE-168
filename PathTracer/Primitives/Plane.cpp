@@ -1,9 +1,10 @@
 #include "Plane.h"
 
-EDX::Plane::Plane(Maths::Vector3f normal, float offset)
+EDX::Plane::Plane(Maths::Vector3f normal, Maths::Vector3f position)
 {
     m_Normal = normal.Normalize();
-    m_Offset = offset;
+    m_Position = position;
+
 }
 
 bool EDX::Plane::Intersects(Ray ray, RayHit& hitResult)
@@ -13,12 +14,13 @@ bool EDX::Plane::Intersects(Ray ray, RayHit& hitResult)
         return false;
     }
 
-    float t = -(Maths::Vector3f::Dot(m_Normal , ray.Origin()) + m_Offset) / vd;
+    auto difference = m_Position - ray.Origin();
+    auto d = Maths::Vector3f::Dot(difference, m_Normal);
+    float t = d / vd;
 
-    if (t < 0.0f) { //Ray intersects the plane Behind the origin. 
+    if (t > 0.0f) { //Ray intersects the plane Behind the origin. 
         return false;
     }
-
 
     hitResult.point = ray.At(t);
     hitResult.t = t;
@@ -32,7 +34,3 @@ void EDX::Plane::SetNormal(Maths::Vector3f normal)
     m_Normal = normal;
 }
 
-void EDX::Plane::SetOffset(float offset)
-{
-    m_Offset = offset;
-}

@@ -26,7 +26,7 @@ EDX::Camera::Camera(Maths::Vector3f& lookFrom, Maths::Vector3f& lookAt, Maths::V
 {
     m_Position = lookFrom;
 
-    m_Forwards = -Maths::Vector3f::Normalize(lookFrom - lookAt);
+    m_Forwards = Maths::Vector3f::Normalize(lookAt - lookFrom);
     m_Right = Maths::Vector3f::Cross(up, m_Forwards).Normalize();
     m_Up = Maths::Vector3f::Cross( m_Forwards, m_Right).Normalize();
 
