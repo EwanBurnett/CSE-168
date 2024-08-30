@@ -16,7 +16,7 @@ EDX::Camera::Camera(Maths::Vector3f& position, double FoVRadians, Maths::Vector3
     m_Position = position;
 
     m_Forwards = forwards;
-    m_Up = up;
+    m_Up = up.Normalize();
     m_Right = right;
 
     m_FoVRadians = FoVRadians;
