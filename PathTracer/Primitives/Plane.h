@@ -1,6 +1,11 @@
 #ifndef __PLANE_H
 #define __PLANE_H
-
+/**
+ * @file Plane.h
+ * @brief Plane Primitive Class
+ * @author Ewan Burnett (EwanBurnettSK@Outlook.com)
+ * @date 2024-08-29
+*/
 #include "../Maths/Vector3.h"
 #include "../Ray.h"
 #include "../RayHit.h"

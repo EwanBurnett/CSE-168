@@ -29,6 +29,11 @@ namespace EDX {
         friend Colour operator /(Colour lhs, const Colour& rhs) { return { lhs.r / rhs.r, lhs.g / rhs.g ,lhs.b / rhs.b, lhs.a / rhs.a }; }
 
 
+        friend Colour operator +(Colour lhs, const float& rhs) { return { lhs.r + rhs, lhs.g + rhs, lhs.b + rhs, lhs.a + rhs }; }
+        friend Colour operator -(Colour lhs, const float& rhs) { return { lhs.r - rhs, lhs.g - rhs, lhs.b - rhs, lhs.a - rhs }; }
+        friend Colour operator *(Colour lhs, const float& rhs) { return { lhs.r * rhs, lhs.g * rhs, lhs.b * rhs, lhs.a * rhs }; }
+        friend Colour operator /(Colour lhs, const float& rhs) { return { lhs.r / rhs, lhs.g / rhs, lhs.b / rhs, lhs.a / rhs }; }
+
         /**
          * @brief Returns a Gamma Corrected version of this colour
          * @param gamma Gamma value. Recommended to be between 0.01 and 4.0.

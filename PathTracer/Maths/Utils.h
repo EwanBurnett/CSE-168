@@ -124,7 +124,7 @@ namespace EDX {
             float max = (-b + sqrtf(discriminant)) / 2.0f * a;
 
             if (min > max) {
-                std::swap(tmin, tmax);
+                std::swap(min, max);
             }
 
             tmin = min; 

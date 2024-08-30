@@ -1,12 +1,20 @@
 #ifndef __TRIANGLE_H
 #define __TRIANGLE_H
-
+/**
+ * @file Triangle.h
+ * @brief Triangle Primitive Class
+ * @author Ewan Burnett (EwanBurnettSK@Outlook.com)
+ * @date 2024-08-29
+*/
 #include "../Maths/Vector3.h"
 #include "../Ray.h"
 #include "../RayHit.h"
 
 namespace EDX {
 
+    /**
+     * @brief Defines a triangle, with ANTICLOCKWISE winding order. 
+    */
     class Triangle {
     public: 
         Triangle(Maths::Vector3f pointA, Maths::Vector3f pointB, Maths::Vector3f pointC); 

@@ -26,7 +26,7 @@ bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult)
     if (tmin < 0.0f) {
         hitResult.t = tmin;
         hitResult.point = ray.At(tmin);
-        hitResult.normal = Maths::Vector3f::Normalize(ray.At(tmin) - m_Position);
+        hitResult.normal = Maths::Vector3f::Normalize(m_Position - ray.At(hitResult.t));
         return true;
     }
 
