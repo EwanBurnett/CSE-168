@@ -20,7 +20,7 @@ namespace EDX {
     public: 
         Scene(); 
 
-        bool TraceRay(const Ray& r, RayHit& hitResult); 
+        bool TraceRay(const Ray& r, RayHit& hitResult) const; 
 
         std::vector<Plane>& Planes(); 
         std::vector<Triangle>& Triangles(); 

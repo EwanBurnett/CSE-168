@@ -7,12 +7,16 @@
  * @date 2024-08-28
 */
 #include "Maths/Vector3.h"
+#include "Materials/BlinnPhong.h"
+#include <memory>
 
 namespace EDX {
     struct RayHit {
         float t;
         Maths::Vector3f point;
         Maths::Vector3f normal;
+        
+        BlinnPhong* pMat = nullptr;
     };
 }
 

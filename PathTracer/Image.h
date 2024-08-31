@@ -22,8 +22,8 @@ namespace EDX {
 
         void Clear(const Colour colour); 
 
-        void ExportToPNG(const char* fileName, const float gamma = 1.0f);
-        void ExportToHDR(const char* fileName, const float gamma = 1.0f);
+        void ExportToPNG(const char* fileName, const float gamma = 1.0f) const;
+        void ExportToHDR(const char* fileName, const float gamma = 1.0f) const;
     private:
         std::vector<Colour> m_ImageData; 
         Maths::Vector2<uint16_t> m_Dimensions; 

@@ -16,7 +16,7 @@ namespace EDX {
     public: 
         Plane(Maths::Vector3f normal, Maths::Vector3f position); 
 
-        bool Intersects(Ray ray, RayHit& hitResult);
+        bool Intersects(Ray ray, RayHit& hitResult) const;
 
         void SetNormal(Maths::Vector3f normal);
 

@@ -10,7 +10,7 @@ EDX::Triangle::Triangle(Maths::Vector3f pointA, Maths::Vector3f pointB, Maths::V
     m_Normal = EDX::Maths::Vector3f::Cross((m_PointB - m_PointA), (m_PointC - m_PointA)).Normalize();
 }
 
-bool EDX::Triangle::Intersects(Ray ray, RayHit& hitResult)
+bool EDX::Triangle::Intersects(Ray ray, RayHit& hitResult) const
 {
     Plane p(m_Normal, m_PointA);
 
@@ -47,6 +47,17 @@ bool EDX::Triangle::Intersects(Ray ray, RayHit& hitResult)
     }
 
     hitResult = plane_hit;
+    hitResult.pMat = const_cast<BlinnPhong*>(&m_Material);
 
     return true;
+}
+
+void EDX::Triangle::SetMaterial(BlinnPhong material)
+{
+    m_Material = material;
+}
+
+EDX::BlinnPhong EDX::Triangle::GetMaterial() const
+{
+    return m_Material;
 }

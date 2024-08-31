@@ -33,7 +33,7 @@ void EDX::Image::Clear(const Colour colour)
     }
 }
 
-void EDX::Image::ExportToPNG(const char* fileName, const float gamma)
+void EDX::Image::ExportToPNG(const char* fileName, const float gamma) const
 {
     //To export with STBI, the image must be converted into unsigned chars. 
     const uint32_t imageSize = m_ImageData.size();
@@ -50,7 +50,7 @@ void EDX::Image::ExportToPNG(const char* fileName, const float gamma)
     stbi_write_png(fileName, m_Dimensions.x, m_Dimensions.y, 4, blob.data(), 0);
 }
 
-void EDX::Image::ExportToHDR(const char* fileName, const float gamma)
+void EDX::Image::ExportToHDR(const char* fileName, const float gamma) const
 {
     //Store a gamma-corrected copy of the image to output. 
     const uint32_t imageSize = m_ImageData.size();

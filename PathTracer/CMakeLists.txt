@@ -4,6 +4,8 @@
 
 project("PathTracer")
 
+find_package(Threads REQUIRED)
+
 include(FetchContent)
 
 # stb image library
@@ -14,8 +16,9 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(stb)
 
-add_executable(${PROJECT_NAME} "main.cpp" "Utils/Logger.h" "Utils/Logger.cpp" "Utils/Timer.h" "Utils/Timer.cpp" "Maths.h" "Maths/Utils.h" "Maths/Vector2.h"  "Maths/Vector3.h" "Maths/Vector4.h" "Maths/Matrix.h" "Maths/Quaternion.h" "Colour.h" "Utils/ProgressBar.h" "Image.h" "Image.cpp" "Ray.h" "Camera.h" "Camera.cpp" "RayHit.h" "Primitives/Sphere.h" "Primitives/Sphere.cpp" "Primitives/Plane.h" "Primitives/Plane.cpp" "Primitives/Triangle.h" "Primitives/Triangle.cpp" "Scene.h" "Scene.cpp" "Lights/DirectionalLight.h" "Lights/DirectionalLight.cpp")
+add_executable(${PROJECT_NAME} "main.cpp" "Utils/Logger.h" "Utils/Logger.cpp" "Utils/Timer.h" "Utils/Timer.cpp" "Maths.h" "Maths/Utils.h" "Maths/Vector2.h"  "Maths/Vector3.h" "Maths/Vector4.h" "Maths/Matrix.h" "Maths/Quaternion.h" "Colour.h" "Utils/ProgressBar.h" "Image.h" "Image.cpp" "Ray.h" "Camera.h" "Camera.cpp" "RayHit.h" "Primitives/Sphere.h" "Primitives/Sphere.cpp" "Primitives/Plane.h" "Primitives/Plane.cpp" "Primitives/Triangle.h" "Primitives/Triangle.cpp" "Scene.h" "Scene.cpp" "Lights/DirectionalLight.h" "Lights/DirectionalLight.cpp" "Materials/BlinnPhong.h")
 target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR})
+target_link_libraries(${PROJECT_NAME} Threads::Threads)
 
 
 # Copy scenes to outdir

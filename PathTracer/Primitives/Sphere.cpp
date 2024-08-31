@@ -7,7 +7,7 @@ EDX::Sphere::Sphere(Maths::Vector3f position, float radius)
     m_Radius = radius;
 }
 
-bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult)
+bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult) const
 {
     //Solve the Quadratic to determine if the ray intersects with the sphere. 
     const EDX::Maths::Vector3f toCenter = m_Position - ray.Origin();
@@ -26,7 +26,8 @@ bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult)
     if (tmin > 0.0f) {
         hitResult.t = tmin;
         hitResult.point = ray.At(tmin);
-        hitResult.normal = (hitResult.point - m_Position).Normalize();// / m_Radius;
+        hitResult.normal = (hitResult.point - m_Position).Normalize();
+        hitResult.pMat = const_cast<BlinnPhong*>(&m_Material);
         return true;
     }
 
@@ -42,4 +43,14 @@ void EDX::Sphere::SetPosition(Maths::Vector3f position)
 void EDX::Sphere::SetRadius(float radius)
 {
     m_Radius = radius;
+}
+
+void EDX::Sphere::SetMaterial(BlinnPhong material)
+{
+    m_Material = material;
+}
+
+EDX::BlinnPhong EDX::Sphere::GetMaterial() const
+{
+    return m_Material;
 }

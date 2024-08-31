@@ -6,7 +6,7 @@ EDX::Scene::Scene()
  
 }
 
-bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult)
+bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult) const
 {
     //Trace the ray through each object in the scene. 
     //TODO: Acceleration

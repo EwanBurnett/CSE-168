@@ -7,7 +7,7 @@ EDX::Plane::Plane(Maths::Vector3f normal, Maths::Vector3f position)
 
 }
 
-bool EDX::Plane::Intersects(Ray ray, RayHit& hitResult)
+bool EDX::Plane::Intersects(Ray ray, RayHit& hitResult) const
 {
     float n_dot_r = Maths::Vector3f::Dot(ray.Direction(), m_Normal);
     if (n_dot_r > Maths::Epsilon) {   //Ray is Parallel to / Pointing away from the Plane. 

@@ -8,13 +8,15 @@
 #include <chrono> 
 #include <filesystem>
 #include <fstream>
+#include <math.h>
+#include <thread>
 
 constexpr uint16_t WIDTH = 1920;
 constexpr uint16_t HEIGHT = 1080;
 const char* OUTPUT_NAME = "Test";
 
 const char* OUTPUT_DIRECTORY = "Output";
-const char* SCENE_PATH = "Scenes/TestScenes/scene2.test";
+const char* SCENE_PATH = "";// "Scenes/HW3/scene7.test";
 
 #define ENABLE_DEBUG_SCENE 1
 
@@ -22,10 +24,125 @@ namespace EDX {
     struct RenderData {
         std::string outputName;
         Maths::Vector2<uint16_t> dimensions;
+        Maths::Vector2<float> FoV;
         Camera camera;
         Scene scene;
     };
 }
+
+bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData);
+EDX::Maths::Vector3f OrientRay(const uint32_t x, const uint32_t y, const EDX::RenderData& renderData);
+EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData);
+void ExportImage(const EDX::Image& img, const std::string& outputName, const float gamma = 1.0f);
+
+int main() {
+    EDX::Log::Status("EDX UC San Diego CS-168 Rendering 2 Coursework\nEwan Burnett - 2024\n");
+
+    //Resource Allocation
+    EDX::RenderData renderData;
+    if (!LoadSceneFile(SCENE_PATH, renderData))
+#if ENABLE_DEBUG_SCENE
+    {   //If we can't load a scene, load the debug scene instead. 
+        //Context
+        {
+            renderData.outputName = OUTPUT_NAME;
+            renderData.dimensions.x = WIDTH;
+            renderData.dimensions.y = HEIGHT;
+        }
+        //Camera
+        {
+            EDX::Maths::Vector3f lookFrom = { 0.0f,0.0f, 0.0f };
+            EDX::Maths::Vector3f lookAt = { 0.0f, 0.0f, 10.0f };
+            EDX::Maths::Vector3f up = { 0.0f, 1.0f, 0.0f };
+            renderData.camera = EDX::Camera(lookFrom, lookAt, up, EDX::Maths::DegToRad(60.0));
+        }
+        //Scene
+        {
+            EDX::BlinnPhong mat = {};
+            mat.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
+            mat.emission = { 0.0f, 0.0f, 0.0f, 1.0f };
+            mat.diffuse = { 0.4f, 0.0f, 0.0f, 1.0f };
+            mat.specular = { 1.0f, 1.0f, 1.0f, 1.0f };
+            mat.shininess = 80.0f;
+
+            /*
+            */
+            renderData.scene.Planes().push_back({
+               {0.0f, 1.0f, 0.0f},{0.0f, -100.0f, 0.0f}
+                });
+            renderData.scene.Triangles().push_back({
+                {-1.0f, -1.0f, 10.0f}, {-1.0f, 1.0f, 10.0f}, {1.0f, -1.0f, 10.0f}
+                });
+            /*
+            renderData.scene.Spheres().push_back({
+                {12.6f, 1.0f, 60.0f}, 1.4f
+                });
+            */
+            renderData.scene.Spheres().push_back({
+                {0.0f, 0.0f, 5.0f}, 1.0f
+                });
+            renderData.scene.Triangles().push_back({
+                {4.0f, -1.0f, 10.0f}, {-1.0f, 1.0f, 10.0f}, {1.0f, -1.0f, 10.0f}
+                });
+
+            renderData.scene.Spheres().push_back({
+                {10.0f, 0.0f, 60.0f}, 8.9f
+                });
+
+            renderData.scene.DirectionalLights().push_back({
+                { -1.0f, 0.6f, -1.0f }, { 1.0f, 1.0f, 1.0f,1.0f }
+                });
+            renderData.scene.DirectionalLights().push_back({
+                { 0.15f, -0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f, 1.0f }
+                });
+
+            for (auto& s : renderData.scene.Spheres()) {
+                s.SetMaterial(mat);
+            }
+        }
+    }
+#else 
+    {
+        EDX::Log::Failure("Failed to load scene!\n");
+        return 1;
+    }
+#endif
+
+    EDX::Log::Status("Rendering Image \"%s\" (%d x %d)\n", renderData.outputName.c_str(), renderData.dimensions.x, renderData.dimensions.y);
+    EDX::ProgressBar pb;
+
+    EDX::Image img(renderData.dimensions.x, renderData.dimensions.y);
+
+    //Compute Horizontal FoV wrt Vertical FoV and Aspect Ratio
+    {
+        const float aspectRatio = (float)renderData.dimensions.x / (float)renderData.dimensions.y;
+
+        renderData.FoV.x = (2.0f * atan(tan(renderData.camera.GetFoVRadians() * 0.5f) * aspectRatio));
+        renderData.FoV.y = renderData.camera.GetFoVRadians();
+    }
+
+    //Render the Image
+    for (uint32_t y = 0; y < renderData.dimensions.y; y++) {
+        for (uint32_t x = 0; x < renderData.dimensions.x; x++) {
+
+            const EDX::Colour pixelColour = RenderPixel(x, y, renderData);
+
+            img.SetPixel(x, y, pixelColour);
+        }
+
+        //Only update the progress bar in the outer part of the loop, as it's SLOW. 
+        float p = (float)(y * renderData.dimensions.x) / (float)(renderData.dimensions.x * renderData.dimensions.y);
+        pb.Update(p);
+    }
+
+    const double render_time_s = pb.GetProgressTimer().Duration();
+    EDX::Log::Success("\nRender Complete in %.8fs.\n", render_time_s);
+
+    ExportImage(img, renderData.outputName);
+
+    return 0;
+}
+
 
 bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
     EDX::Log::Status("Loading Scene \"%s\".\n", filePath);
@@ -49,6 +166,10 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
 
     std::vector<EDX::Maths::Vector3f> vertices;
     uint64_t currentVtx = 0;
+
+    EDX::BlinnPhong material = {};
+    material.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
+
 
     //Parse each line from the file. 
     for (std::string line; std::getline(inScene, line);) {
@@ -131,7 +252,9 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 }
 
                 float radius = std::stof(tokens[4]);
-                renderData.scene.Spheres().push_back({ position, radius });
+                EDX::Sphere s = { position, radius };
+                s.SetMaterial(material);
+                renderData.scene.Spheres().push_back(s);
             }
             //The 'maxverts' command specifies the maximum number of vertices in this scene. 
             //Used for array sizing. 
@@ -156,13 +279,20 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
             }
             //The 'tri' command defines a triangle geometry.
             //Defined by 3 vertices, a, b and c - indexed into the vertices array. 
+            //tri [a] [b] [c]
             else if (command == "tri") {
                 uint32_t a = std::stoi(tokens[1]);
-                uint32_t b = std::stoi(tokens[2]); 
+                uint32_t b = std::stoi(tokens[2]);
                 uint32_t c = std::stoi(tokens[3]);
 
-                renderData.scene.Triangles().push_back({ vertices[a], vertices[b], vertices[c] });
+                EDX::Triangle t = { vertices[a], vertices[b], vertices[c] };
+                t.SetMaterial(material);
+
+                renderData.scene.Triangles().push_back(t);
             }
+            //The 'directional' command defines a Directional light
+            //Defined by a Direction and a colour. 
+            //direction [dir xyz] [colour rgb]
             else if (command == "directional") {
                 EDX::Maths::Vector3f direction = {};
                 {
@@ -181,6 +311,49 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
 
                 renderData.scene.DirectionalLights().push_back({ direction, colour });
             }
+            else if (command == "diffuse") {
+                EDX::Colour d = {};
+                {
+                    d.r = std::stof(tokens[1]);
+                    d.g = std::stof(tokens[2]);
+                    d.b = std::stof(tokens[3]);
+                    d.a = 1.0f;
+                }
+                material.diffuse = d;
+            }
+            else if (command == "ambient") {
+                EDX::Colour a = {};
+                {
+                    a.r = std::stof(tokens[1]);
+                    a.g = std::stof(tokens[2]);
+                    a.b = std::stof(tokens[3]);
+                    a.a = 1.0f;
+                }
+                material.ambient = a;
+            }
+            else if (command == "emissive") {
+                EDX::Colour e = {};
+                {
+                    e.r = std::stof(tokens[1]);
+                    e.g = std::stof(tokens[2]);
+                    e.b = std::stof(tokens[3]);
+                    e.a = 1.0f;
+                }
+                material.emission = e;
+            }
+            else if (command == "specular") {
+                EDX::Colour s = {};
+                {
+                    s.r = std::stof(tokens[1]);
+                    s.g = std::stof(tokens[2]);
+                    s.b = std::stof(tokens[3]);
+                    s.a = 1.0f;
+                }
+                material.specular = s;
+            }
+            else if (command == "shininess") {
+                material.shininess = std::stof(tokens[1]);
+            }
             else {
                 EDX::Log::Warning("Unknown Command \"%s\".\n", command.c_str());
             }
@@ -190,161 +363,106 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
     return true;
 }
 
-int main() {
-    EDX::Log::Status("EDX UC San Diego CS-168 Rendering 2 Coursework\nEwan Burnett - 2024\n");
+EDX::Maths::Vector3f OrientRay(const uint32_t x, const uint32_t y, const EDX::RenderData& renderData)
+{
+    const float alpha = 4.0f * tan(renderData.FoV.x / 2.0f) * ((x - ((float)renderData.dimensions.x / 2.0f)) / (float)renderData.dimensions.x / 2.0f);
+    const float beta = 4.0f * -tan(renderData.FoV.y / 2.0f) * ((y - ((float)renderData.dimensions.y / 2.0f)) / (float)renderData.dimensions.y / 2.0f);
 
-    //Resource Allocation
-    EDX::RenderData renderData;
-    if (!LoadSceneFile(SCENE_PATH, renderData))
-#if ENABLE_DEBUG_SCENE
-    {   //If we can't load a scene, load the debug scene instead. 
-        //Context
-        {
-            renderData.outputName = OUTPUT_NAME;
-            renderData.dimensions.x = WIDTH;
-            renderData.dimensions.y = HEIGHT;
-        }
-        //Camera
-        {
-            EDX::Maths::Vector3f lookFrom = { 0.0f,0.0f, 0.0f };
-            EDX::Maths::Vector3f lookAt = { 0.0f, 0.0f, 10.0f };
-            EDX::Maths::Vector3f up = { 0.0f, 1.0f, 0.0f };
-            renderData.camera = EDX::Camera(lookFrom, lookAt, up, EDX::Maths::DegToRad(60.0));
-        }
-        //Scene
-        {
-            /*
-            renderData.scene.Planes().push_back({
-               {0.0f, 0.0f,-1.0f},{0.0f, 0.0f,100.0f}
-                });
-            */
-            renderData.scene.Triangles().push_back({
-                {-1.0f, -1.0f, 10.0f}, {-1.0f, 1.0f, 10.0f}, {1.0f, -1.0f, 10.0f}
-                });
-            /*
-            renderData.scene.Spheres().push_back({
-                {12.6f, 1.0f, 60.0f}, 1.4f
-                });
-            */
-            renderData.scene.Spheres().push_back({
-                {0.0f, 0.0f, 5.0f}, 1.0f
-                });
- renderData.scene.Triangles().push_back({
-                {1.0f, -1.0f, -10.0f}, {-1.0f, 1.0f, -10.0f}, {1.0f, -1.0f, -10.0f}
-                });
+    EDX::Maths::Vector3f dir = {};
+    dir = (alpha * renderData.camera.GetRightVector()) + (beta * renderData.camera.GetUpVector()) + renderData.camera.GetForwardsVector();
+    return dir.Normalize();
+}
 
-            renderData.scene.Spheres().push_back({
-                {0.0f, 0.0f, 6.0f}, 0.9f
-                });
+EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData)
+{
+    EDX::Colour clr = { 0.0f, 0.0f, 0.0f, 1.0f };   //Output Pixel Colour - Black by default. 
 
-            renderData.scene.DirectionalLights().push_back({
-                { 0.0f, 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f,1.0f }
-                });
-            renderData.scene.DirectionalLights().push_back({
-                { 0.0f, -0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f, 1.0f }
-                });
-        }
-    }
-#else 
+    //Compute a Direction for this ray
+    EDX::Maths::Vector3f rayDirection = OrientRay(x, y, renderData);
+
+    EDX::Ray r(renderData.camera.GetPosition(), rayDirection);
+
+
+    //Test Intersection in the scene
+    EDX::RayHit result = {};
+    if (renderData.scene.TraceRay(r, result))
     {
-        EDX::Log::Failure("Failed to load scene!\n");
-        return 1;
-    }
-#endif
+        if (result.pMat) {
+            EDX::BlinnPhong m = *result.pMat;
+            clr = clr + m.ambient;
+            clr = clr + m.emission;
 
-    EDX::Image img(renderData.dimensions.x, renderData.dimensions.y);
-    {
-        EDX::Log::Status("Rendering...\n");
-        EDX::ProgressBar pb;
+            for (auto& light : renderData.scene.DirectionalLights()) {
+                //Apply constant shading
+                const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
 
-        //Shoot rays through the center of each pixel, adding 0.5 offset to x and y with respect to the image aspect ratio. 
-        const float aspectRatio = (float)renderData.dimensions.x / (float)renderData.dimensions.y;
+                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
 
-        const float FoVX = (2.0f * atan(tan(renderData.camera.GetFoVRadians() * 0.5f) * aspectRatio)); //Compute Horizontal FoV wrt Vertical FoV and Aspect Ratio
-        const float FoVY = renderData.camera.GetFoVRadians();
+                if (n_dot_l > 0.0f) {
+                    const EDX::Colour& k_Light = light.GetColour();
 
-        //Render the Image
-        for (uint32_t y = 0; y < renderData.dimensions.y; y++) {
-            for (uint32_t x = 0; x < renderData.dimensions.x; x++) {
-                EDX::Colour clr = {0.0f, 0.0f, 0.0f, 1.0f};
+                    const auto h = (lightDir + -rayDirection).Normalize();
 
-                const float alpha = -tan(FoVX / 2.0f) * ((((float)renderData.dimensions.x / 2.0f) - x) / (float)renderData.dimensions.x / 2.0f);
-                const float beta = -tan(FoVY / 2.0f) * ((y - ((float)renderData.dimensions.y / 2.0f)) / (float)renderData.dimensions.y / 2.0f);
+                    const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
+                    clr = clr + (k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess)));
 
-                EDX::Maths::Vector3f rayDirection;
-                rayDirection = (alpha * renderData.camera.GetRightVector()) + (beta * renderData.camera.GetUpVector()) + renderData.camera.GetForwardsVector();
-                rayDirection = rayDirection.Normalize();
-
-
-                EDX::Ray r(renderData.camera.GetPosition(), rayDirection);
-
-                EDX::RayHit result = {};
-                //Test Intersection in the scene
-                if (renderData.scene.TraceRay(r, result))
-                {
-                    const EDX::Colour k_Ambient = { 0.10f, 0.10f, 0.10f, 0.0f };
-                    clr = clr + k_Ambient;
-                    for (auto& light : renderData.scene.DirectionalLights()) {
-                        //Apply constant shading
-                        const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
-
-                        const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
-
-                        if (n_dot_l > 0.0f) {
-                            const EDX::Colour& k_Light = light.GetColour();
-
-                            clr = clr + (k_Light * n_dot_l * k_Light.a);
-                        }
-                    }
-                    //clr =  EDX::Colour(result.normal.x + 1, result.normal.y + 1,  result.normal.z + 1, 1.0f) * 0.5f ;
-                    //clr = { result.normal.x, 0.0f, 0.0f, 1.0f };
-                    //clr = { result.point.x, result.point.y,  result.point.z, 1.0f };
                 }
-
-                //clr = { alpha, beta, 0.0f, 1.0f }; 
-                //Clamp the pixel colour to [0, 1]
-                clr.r = EDX::Maths::Clamp(clr.r, 0.0f, 1.0f);
-                clr.g = EDX::Maths::Clamp(clr.g, 0.0f, 1.0f);
-                clr.b = EDX::Maths::Clamp(clr.b, 0.0f, 1.0f);
-                clr.a = 1.0f;   //Ignore any transparency artifacts. 
-
-                img.SetPixel(x, y, clr);
             }
 
-            //Only update the progress bar in the outer part of the loop, as it's SLOW. 
-            float p = (float)(y * renderData.dimensions.x) / (float)(renderData.dimensions.x * renderData.dimensions.y);
-            pb.Update(p);
         }
+        else {
+            const EDX::Colour k_Ambient = { 0.10f, 0.10f, 0.10f, 0.0f };
+            clr = clr + k_Ambient;
 
-        const double render_time_s = pb.GetProgressTimer().Duration();
-        EDX::Log::Success("\nRender Complete in %.8fs.\n", render_time_s);
+            for (auto& light : renderData.scene.DirectionalLights()) {
+                //Apply constant shading
+                const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
+
+                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
+
+                if (n_dot_l > 0.0f) {
+                    const EDX::Colour& k_Light = light.GetColour();
+
+                    clr = clr + (k_Light * n_dot_l * k_Light.a);
+                }
+            }
+        }
+        //clr = EDX::Colour(result.normal.x + 1, result.normal.y + 1, result.normal.z + 1, 1.0f) * 0.5f;    //Uncomment to view Normals
     }
 
+    //Clamp the pixel colour to [0, 1]
+    clr.r = EDX::Maths::Clamp(clr.r, 0.0f, 1.0f);
+    clr.g = EDX::Maths::Clamp(clr.g, 0.0f, 1.0f);
+    clr.b = EDX::Maths::Clamp(clr.b, 0.0f, 1.0f);
+    clr.a = 1.0f;   //Ignore any transparency artifacts. 
+
+    return clr;
+}
+
+void ExportImage(const EDX::Image& img, const std::string& outputName, const float gamma)
+{
     EDX::Log::Status("Exporting Render to PNG...\n");
-    {
-        std::filesystem::create_directory(OUTPUT_DIRECTORY);
+    std::filesystem::create_directory(OUTPUT_DIRECTORY);
 
-        //Format the filename in relation to the output path. 
-        char buffer[0xff];
-        strcpy(buffer, OUTPUT_DIRECTORY);
-        strcat(buffer, "/");
-        if (!renderData.outputName.empty()) {
-            strcat(buffer, renderData.outputName.c_str());
-            strcat(buffer, "_");
-        }
-
-        //Format a timestamp for this render
-        std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-        std::time_t time = std::chrono::system_clock::to_time_t(now);
-        std::tm tm = *std::localtime(&time);
-
-        size_t len = strlen(buffer);
-        strftime(buffer + len, 0xff - len, "%Y-%m-%d_%H-%M-%S.png", &tm);
-
-        EDX::Log::Status("Output Path: %s/%s\n", std::filesystem::current_path().generic_string().c_str(), buffer);
-        img.ExportToPNG(buffer, 2.2);
+    //Format the filename in relation to the output path. 
+    char buffer[0xff];
+    strcpy(buffer, OUTPUT_DIRECTORY);
+    strcat(buffer, "/");
+    if (!outputName.empty()) {
+        strcat(buffer, outputName.c_str());
+        strcat(buffer, "_");
     }
-    EDX::Log::Status("Export Complete.\n");
 
-    return 0;
+    //Format a timestamp for this render
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+    std::time_t time = std::chrono::system_clock::to_time_t(now);
+    std::tm tm = *std::localtime(&time);
+
+    size_t len = strlen(buffer);
+    strftime(buffer + len, 0xff - len, "%Y-%m-%d_%H-%M-%S.png", &tm);
+
+    EDX::Log::Status("Output Path: %s/%s\n", std::filesystem::current_path().generic_string().c_str(), buffer);
+    img.ExportToPNG(buffer, gamma);
+
+    EDX::Log::Status("Export Complete.\n");
 }
