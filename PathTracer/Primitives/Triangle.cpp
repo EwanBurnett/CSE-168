@@ -7,7 +7,7 @@ EDX::Triangle::Triangle(Maths::Vector3f pointA, Maths::Vector3f pointB, Maths::V
     m_PointB = pointB;
     m_PointC = pointC;
 
-    m_Normal = EDX::Maths::Vector3f::Cross((m_PointC - m_PointA), (m_PointB - m_PointA)).Normalize();
+    m_Normal = EDX::Maths::Vector3f::Cross((m_PointB - m_PointA), (m_PointC - m_PointA)).Normalize();
 }
 
 bool EDX::Triangle::Intersects(Ray ray, RayHit& hitResult)

@@ -23,23 +23,23 @@ bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult)
         return false;
     }
 
-    if (tmin < 0.0f) {
+    if (tmin > 0.0f) {
         hitResult.t = tmin;
         hitResult.point = ray.At(tmin);
-        hitResult.normal = Maths::Vector3f::Normalize(m_Position - ray.At(hitResult.t));
+        hitResult.normal = (hitResult.point - m_Position).Normalize();// / m_Radius;
         return true;
     }
 
-    return false; 
+    return false;
 
 }
 
 void EDX::Sphere::SetPosition(Maths::Vector3f position)
 {
-    m_Position = position; 
+    m_Position = position;
 }
 
 void EDX::Sphere::SetRadius(float radius)
 {
-    m_Radius = radius; 
+    m_Radius = radius;
 }

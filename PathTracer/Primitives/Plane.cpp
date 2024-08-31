@@ -9,16 +9,15 @@ EDX::Plane::Plane(Maths::Vector3f normal, Maths::Vector3f position)
 
 bool EDX::Plane::Intersects(Ray ray, RayHit& hitResult)
 {
-    float vd = Maths::Vector3f::Dot(ray.Direction(), m_Normal);
-    if (vd < 0.0) {   //Ray is Parallel to / Pointing away from the Plane. 
+    float n_dot_r = Maths::Vector3f::Dot(ray.Direction(), m_Normal);
+    if (n_dot_r > Maths::Epsilon) {   //Ray is Parallel to / Pointing away from the Plane. 
         return false;
     }
 
-    auto difference = m_Position - ray.Origin();
-    auto d = Maths::Vector3f::Dot(difference, m_Normal);
-    float t = d / vd;
+    float d = Maths::Vector3f::Dot((m_Position - ray.Origin()), m_Normal);
+    float t = d / n_dot_r;
 
-    if (t > 0.0f) { //Ray intersects the plane Behind the origin. 
+    if (t < 0.0f) { //Ray intersects the plane Behind the origin. 
         return false;
     }
 

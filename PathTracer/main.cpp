@@ -158,8 +158,8 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
             //Defined by 3 vertices, a, b and c - indexed into the vertices array. 
             else if (command == "tri") {
                 uint32_t a = std::stoi(tokens[1]);
-                uint32_t b = std::stoi(tokens[3]);  //Swap to enforce handedness!
-                uint32_t c = std::stoi(tokens[2]);
+                uint32_t b = std::stoi(tokens[2]); 
+                uint32_t c = std::stoi(tokens[3]);
 
                 renderData.scene.Triangles().push_back({ vertices[a], vertices[b], vertices[c] });
             }
@@ -213,18 +213,30 @@ int main() {
         }
         //Scene
         {
+            /*
             renderData.scene.Planes().push_back({
                {0.0f, 0.0f,-1.0f},{0.0f, 0.0f,100.0f}
                 });
+            */
             renderData.scene.Triangles().push_back({
-                { -2.0f,0.0f, 17.0f },{ 1.0f, -12.0f, 10.0f },  { 0.0f, 1.0f, 17.0f }
+                {-1.0f, -1.0f, 10.0f}, {-1.0f, 1.0f, 10.0f}, {1.0f, -1.0f, 10.0f}
                 });
+            /*
             renderData.scene.Spheres().push_back({
                 {12.6f, 1.0f, 60.0f}, 1.4f
                 });
+            */
             renderData.scene.Spheres().push_back({
-                {0.0f, 0.0f, 10.0f}, 1.0f
+                {0.0f, 0.0f, 5.0f}, 1.0f
                 });
+ renderData.scene.Triangles().push_back({
+                {1.0f, -1.0f, -10.0f}, {-1.0f, 1.0f, -10.0f}, {1.0f, -1.0f, -10.0f}
+                });
+
+            renderData.scene.Spheres().push_back({
+                {0.0f, 0.0f, 6.0f}, 0.9f
+                });
+
             renderData.scene.DirectionalLights().push_back({
                 { 0.0f, 0.0f, -1.0f }, { 1.0f, 1.0f, 1.0f,1.0f }
                 });
@@ -254,13 +266,13 @@ int main() {
         //Render the Image
         for (uint32_t y = 0; y < renderData.dimensions.y; y++) {
             for (uint32_t x = 0; x < renderData.dimensions.x; x++) {
-                EDX::Colour clr = {};
+                EDX::Colour clr = {0.0f, 0.0f, 0.0f, 1.0f};
 
-                const float alpha = tan(FoVX / 2.0f) * ((((float)renderData.dimensions.x / 2.0f) - x) / (float)renderData.dimensions.x / 2.0f);
-                const float beta = tan(FoVY / 2.0f) * ((y - ((float)renderData.dimensions.y / 2.0f)) / (float)renderData.dimensions.y / 2.0f);
+                const float alpha = -tan(FoVX / 2.0f) * ((((float)renderData.dimensions.x / 2.0f) - x) / (float)renderData.dimensions.x / 2.0f);
+                const float beta = -tan(FoVY / 2.0f) * ((y - ((float)renderData.dimensions.y / 2.0f)) / (float)renderData.dimensions.y / 2.0f);
 
                 EDX::Maths::Vector3f rayDirection;
-                rayDirection = (alpha * renderData.camera.GetRightVector()) + (beta * renderData.camera.GetUpVector()) - renderData.camera.GetForwardsVector();
+                rayDirection = (alpha * renderData.camera.GetRightVector()) + (beta * renderData.camera.GetUpVector()) + renderData.camera.GetForwardsVector();
                 rayDirection = rayDirection.Normalize();
 
 
@@ -270,13 +282,13 @@ int main() {
                 //Test Intersection in the scene
                 if (renderData.scene.TraceRay(r, result))
                 {
-                    const EDX::Colour k_Ambient = { 0.50f, 0.50f, 0.50f, 0.0f };
+                    const EDX::Colour k_Ambient = { 0.10f, 0.10f, 0.10f, 0.0f };
                     clr = clr + k_Ambient;
                     for (auto& light : renderData.scene.DirectionalLights()) {
                         //Apply constant shading
                         const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
 
-                        const float n_dot_l = result.normal.Dot(lightDir);
+                        const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
 
                         if (n_dot_l > 0.0f) {
                             const EDX::Colour& k_Light = light.GetColour();
@@ -284,15 +296,17 @@ int main() {
                             clr = clr + (k_Light * n_dot_l * k_Light.a);
                         }
                     }
-                    clr = { result.normal.x, result.normal.y,  result.normal.z, 1.0f };
+                    //clr =  EDX::Colour(result.normal.x + 1, result.normal.y + 1,  result.normal.z + 1, 1.0f) * 0.5f ;
+                    //clr = { result.normal.x, 0.0f, 0.0f, 1.0f };
                     //clr = { result.point.x, result.point.y,  result.point.z, 1.0f };
                 }
 
+                //clr = { alpha, beta, 0.0f, 1.0f }; 
                 //Clamp the pixel colour to [0, 1]
                 clr.r = EDX::Maths::Clamp(clr.r, 0.0f, 1.0f);
                 clr.g = EDX::Maths::Clamp(clr.g, 0.0f, 1.0f);
                 clr.b = EDX::Maths::Clamp(clr.b, 0.0f, 1.0f);
-                clr.a = 1.0f; // EDX::Maths::Clamp(clr.a, 0.0f, 1.0f);
+                clr.a = 1.0f;   //Ignore any transparency artifacts. 
 
                 img.SetPixel(x, y, clr);
             }

@@ -11,7 +11,7 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult)
     //Trace the ray through each object in the scene. 
     //TODO: Acceleration
 
-    float nearest = -Maths::Infinity;
+    float nearest = Maths::Infinity;
     RayHit result = {}; 
     bool anyHit = false; 
 
@@ -19,7 +19,7 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult)
     {
         EDX::RayHit l_result = {};
         if (m_Planes[i].Intersects(r, l_result)) {
-            if (nearest < l_result.t) {
+            if (nearest > l_result.t) {
                 nearest = l_result.t;
                 result = l_result;
                 anyHit = true;
@@ -30,7 +30,7 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult)
     {
         EDX::RayHit l_result = {};
         if (m_Triangles[i].Intersects(r, l_result)) {
-            if (nearest < l_result.t) {
+            if (nearest > l_result.t) {
                 nearest = l_result.t;
                 result = l_result;
                 anyHit = true;
@@ -40,7 +40,7 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult)
     for (int i = 0; i < m_Spheres.size(); i++) {
         EDX::RayHit l_result = {};
         if (m_Spheres[i].Intersects(r, l_result)) {
-            if (nearest < l_result.t) {
+            if (nearest > l_result.t) {
                 nearest = l_result.t;
                 result = l_result;
                 anyHit = true;

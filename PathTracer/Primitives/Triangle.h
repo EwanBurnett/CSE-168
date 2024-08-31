@@ -13,7 +13,7 @@
 namespace EDX {
 
     /**
-     * @brief Defines a triangle, with ANTICLOCKWISE winding order. 
+     * @brief Defines a triangle, with CLOCKWISE winding order. 
     */
     class Triangle {
     public: 
