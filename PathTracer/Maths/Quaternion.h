@@ -228,8 +228,8 @@ namespace EDX {
             }
 
             static Quaternion FromMatrix4x4(const Matrix4x4<double>& mat);
-            Matrix4x4<double> ToMatrix4x4();
-            static Matrix4x4<double> ToMatrix4x4(const Quaternion& q);
+            Matrix4x4<float> ToMatrix4x4();
+            static Matrix4x4<float> ToMatrix4x4(const Quaternion& q);
 
 
             //From Yaw-Pitch-Roll (z, y, x)

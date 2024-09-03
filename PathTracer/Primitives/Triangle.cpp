@@ -13,6 +13,7 @@ EDX::Triangle::Triangle(Maths::Vector3f pointA, Maths::Vector3f pointB, Maths::V
 bool EDX::Triangle::Intersects(Ray ray, RayHit& hitResult) const
 {
     Plane p(m_Normal, m_PointA);
+    p.SetWorldMatrix(m_World);
 
     RayHit plane_hit = {};
     if (!p.Intersects(ray, plane_hit)) {
@@ -49,15 +50,6 @@ bool EDX::Triangle::Intersects(Ray ray, RayHit& hitResult) const
     hitResult = plane_hit;
     hitResult.pMat = const_cast<BlinnPhong*>(&m_Material);
 
+   
     return true;
-}
-
-void EDX::Triangle::SetMaterial(BlinnPhong material)
-{
-    m_Material = material;
-}
-
-EDX::BlinnPhong EDX::Triangle::GetMaterial() const
-{
-    return m_Material;
 }

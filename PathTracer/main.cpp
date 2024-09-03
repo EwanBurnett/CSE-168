@@ -9,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <math.h>
+#include <stack>
 #include <thread>
 
 constexpr uint16_t WIDTH = 1920;
@@ -16,7 +17,7 @@ constexpr uint16_t HEIGHT = 1080;
 const char* OUTPUT_NAME = "Test";
 
 const char* OUTPUT_DIRECTORY = "Output";
-const char* SCENE_PATH = "";// "Scenes/HW3/scene7.test";
+const char* SCENE_PATH = ""; //"Scenes/TestScenes/scene3.test";// "Scenes/HW3/scene7.test";
 
 #define ENABLE_DEBUG_SCENE 1
 
@@ -38,8 +39,9 @@ void ExportImage(const EDX::Image& img, const std::string& outputName, const flo
 int main() {
     EDX::Log::Status("EDX UC San Diego CS-168 Rendering 2 Coursework\nEwan Burnett - 2024\n");
 
-    //Resource Allocation
-    EDX::RenderData renderData;
+    //Load the scene 
+    EDX::RenderData renderData = {};
+
     if (!LoadSceneFile(SCENE_PATH, renderData))
 #if ENABLE_DEBUG_SCENE
     {   //If we can't load a scene, load the debug scene instead. 
@@ -65,25 +67,31 @@ int main() {
             mat.specular = { 1.0f, 1.0f, 1.0f, 1.0f };
             mat.shininess = 80.0f;
 
+            EDX::BlinnPhong mat2 = {};
+            mat2.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
+            mat2.emission = { 0.0f, 0.0f, 0.0f, 1.0f };
+            mat2.diffuse = { 0.1f, 0.7f, 0.3f, 1.0f };
+            mat2.specular = { 1.0f, 1.0f, 1.0f, 1.0f };
+            mat2.shininess = 12.0f;
+
+
             /*
             */
-            renderData.scene.Planes().push_back({
-               {0.0f, 1.0f, 0.0f},{0.0f, -100.0f, 0.0f}
-                });
-            renderData.scene.Triangles().push_back({
-                {-1.0f, -1.0f, 10.0f}, {-1.0f, 1.0f, 10.0f}, {1.0f, -1.0f, 10.0f}
-                });
-            /*
-            renderData.scene.Spheres().push_back({
-                {12.6f, 1.0f, 60.0f}, 1.4f
-                });
-            */
-            renderData.scene.Spheres().push_back({
-                {0.0f, 0.0f, 5.0f}, 1.0f
-                });
-            renderData.scene.Triangles().push_back({
-                {4.0f, -1.0f, 10.0f}, {-1.0f, 1.0f, 10.0f}, {1.0f, -1.0f, 10.0f}
-                });
+            EDX::Plane p = { {0.0f, 1.0f, 0.0f},{0.0f, -100.0f, 0.0f} };
+            p.SetMaterial(mat2);
+            renderData.scene.Planes().push_back(
+                p
+            );
+            EDX::Sphere s = { {0.0f, 0.0f, 0.0f}, 1.0f };
+            EDX::Maths::Matrix4x4<float> transform = (EDX::Maths::Matrix4x4<float>::Scaling({ 1.0f, 0.5f, 1.0f }) * EDX::Maths::Matrix4x4<float>::YRotationFromDegrees(110.0f)) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, 0.0f });
+            s.SetWorldMatrix(transform);
+            renderData.scene.Spheres().push_back(s);
+
+            EDX::Triangle t = { {-1.0f, -1.0f, 10.0f}, {-1.0f, 1.0f, 10.0f}, {1.0f, -1.0f, 10.0f} };
+            t.SetWorldMatrix(transform);
+            renderData.scene.Triangles().push_back(t);
+            renderData.scene.Triangles().push_back(t);
+
 
             renderData.scene.Spheres().push_back({
                 {10.0f, 0.0f, 60.0f}, 8.9f
@@ -170,6 +178,9 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
     EDX::BlinnPhong material = {};
     material.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
 
+    std::stack<EDX::Maths::Matrix4x4<float>> transformStack;
+    EDX::Maths::Matrix4x4<float> currentTransform = {};
+
 
     //Parse each line from the file. 
     for (std::string line; std::getline(inScene, line);) {
@@ -254,6 +265,7 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 float radius = std::stof(tokens[4]);
                 EDX::Sphere s = { position, radius };
                 s.SetMaterial(material);
+                s.SetWorldMatrix(EDX::Maths::Matrix4x4<float>::Transpose(currentTransform));
                 renderData.scene.Spheres().push_back(s);
             }
             //The 'maxverts' command specifies the maximum number of vertices in this scene. 
@@ -287,7 +299,7 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
 
                 EDX::Triangle t = { vertices[a], vertices[b], vertices[c] };
                 t.SetMaterial(material);
-
+                t.SetWorldMatrix(EDX::Maths::Matrix4x4<float>::Transpose(currentTransform));
                 renderData.scene.Triangles().push_back(t);
             }
             //The 'directional' command defines a Directional light
@@ -354,6 +366,50 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
             else if (command == "shininess") {
                 material.shininess = std::stof(tokens[1]);
             }
+            else if (command == "pushTransform") {
+                transformStack.push(currentTransform);
+            }
+            else if (command == "popTransform") {
+                currentTransform = transformStack.top();
+                transformStack.pop();
+            }
+
+            else if (command == "translate") {
+                EDX::Maths::Vector3f t = {
+                    std::stof(tokens[1]),
+                    std::stof(tokens[2]),
+                    std::stof(tokens[3])
+                };
+                auto translation = EDX::Maths::Matrix4x4<float>::Translation(t);
+                currentTransform = EDX::Maths::Matrix4x4<float>::Transpose(translation) * currentTransform;
+            }
+            else if (command == "rotate") {
+                const EDX::Maths::Vector3f axis = {
+                    std::stof(tokens[1]),
+                    std::stof(tokens[2]),
+                    std::stof(tokens[3])
+                };
+
+                const float angle = EDX::Maths::DegToRad(std::stof(tokens[4]));
+
+                EDX::Maths::Quaternion q;
+                q = q.FromAxisAngle(axis, angle);
+
+                auto m = q.ToMatrix4x4();
+                currentTransform = EDX::Maths::Matrix4x4<float>::Transpose(m) * currentTransform;
+            }
+            else if (command == "scale") {
+                EDX::Maths::Vector3f s = {
+                std::stof(tokens[1]),
+                std::stof(tokens[2]),
+                std::stof(tokens[3])
+                };
+                //Manually apply the scaling for col. major
+                currentTransform[0] = currentTransform[0] * s.x; 
+                currentTransform[5] = currentTransform[5] * s.y; 
+                currentTransform[10] = currentTransform[10] * s.z; 
+            }
+
             else {
                 EDX::Log::Warning("Unknown Command \"%s\".\n", command.c_str());
             }
@@ -387,13 +443,13 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
     EDX::RayHit result = {};
     if (renderData.scene.TraceRay(r, result))
     {
+        //Apply shading based on the Material
         if (result.pMat) {
-            EDX::BlinnPhong m = *result.pMat;
+            const EDX::BlinnPhong m = *result.pMat;
             clr = clr + m.ambient;
             clr = clr + m.emission;
 
             for (auto& light : renderData.scene.DirectionalLights()) {
-                //Apply constant shading
                 const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
 
                 const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
@@ -415,7 +471,6 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
             clr = clr + k_Ambient;
 
             for (auto& light : renderData.scene.DirectionalLights()) {
-                //Apply constant shading
                 const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
 
                 const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);

@@ -6,29 +6,21 @@
  * @author Ewan Burnett (EwanBurnettSK@Outlook.com)
  * @date 2024-08-29
 */
-#include "../Maths/Vector3.h"
-#include "../Ray.h"
-#include "../RayHit.h"
-#include "../Materials/BlinnPhong.h"
+#include "Primitive.h" 
 
 namespace EDX {
-    class Sphere {
+    class Sphere : public Primitive {
     public: 
         Sphere(Maths::Vector3f position, float radius); 
 
-        bool Intersects(Ray ray, RayHit& hitResult) const;
+        bool Intersects(Ray ray, RayHit& hitResult) const override;
 
         void SetPosition(Maths::Vector3f position);
         void SetRadius(float radius); 
 
-        void SetMaterial(BlinnPhong material); 
-        BlinnPhong GetMaterial() const; 
-
     private:
         Maths::Vector3f m_Position; 
         float m_Radius; 
-
-        BlinnPhong m_Material; 
     };
 }
 

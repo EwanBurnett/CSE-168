@@ -6,17 +6,15 @@
  * @author Ewan Burnett (EwanBurnettSK@Outlook.com)
  * @date 2024-08-29
 */
-#include "../Maths/Vector3.h"
-#include "../Ray.h"
-#include "../RayHit.h"
+#include "Primitive.h"
 
 namespace EDX {
 
-    class Plane {
+    class Plane : public Primitive{
     public: 
         Plane(Maths::Vector3f normal, Maths::Vector3f position); 
 
-        bool Intersects(Ray ray, RayHit& hitResult) const;
+        bool Intersects(Ray ray, RayHit& hitResult) const override;
 
         void SetNormal(Maths::Vector3f normal);
 
