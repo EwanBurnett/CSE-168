@@ -43,14 +43,12 @@ bool EDX::Plane::Intersects(Ray ray, RayHit& hitResult) const
         return false;
     }
 
-    //hitResult.point = ray.At(t);
     hitResult.t = t;
-    //hitResult.normal = m_Normal;
     hitResult.pMat = const_cast<BlinnPhong*>(&m_Material);
 
-    const Maths::Vector3f p = ray.At(t);
     //Compute transformed intersection point
     {
+        const Maths::Vector3f p = ray.At(t);
         Maths::Vector4f hit_point = { p.x, p.y, p.z, 1.0f };
         hit_point = hit_point * m_World;
         hitResult.point = { hit_point.x, hit_point.y, hit_point.z };
@@ -61,12 +59,11 @@ bool EDX::Plane::Intersects(Ray ray, RayHit& hitResult) const
         bool isInvertible = false;
         const Maths::Matrix4x4<float> invTranspose = Maths::Matrix4x4<float>::Transpose(inverseTransform);
 
-        Maths::Vector3f n = m_Normal;
+        const Maths::Vector3f n = m_Normal;
         Maths::Vector4f normal = { n.x, n.y, n.z, 0.0f };
         normal = normal * invTranspose;
         hitResult.normal = Maths::Vector3f::Normalize({ normal.x, normal.y, normal.z });
     }
-
 
 
     return true;

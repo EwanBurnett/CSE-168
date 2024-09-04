@@ -10,6 +10,7 @@
 #include "Primitives/Triangle.h"
 #include "Primitives/Sphere.h"
 #include "Lights/DirectionalLight.h"
+#include "Lights/PointLight.h"
 #include "Ray.h"
 #include "RayHit.h"
 #include <vector>
@@ -27,6 +28,7 @@ namespace EDX {
         std::vector<Sphere>& Spheres(); 
 
         std::vector<DirectionalLight>& DirectionalLights();
+        std::vector<PointLight>& PointLights();
 
     private:
         std::vector<Plane> m_Planes;
@@ -34,6 +36,7 @@ namespace EDX {
         std::vector<Sphere> m_Spheres;
 
         std::vector<DirectionalLight> m_DirectionalLights;
+        std::vector<PointLight> m_PointLights;
     };
 
 }

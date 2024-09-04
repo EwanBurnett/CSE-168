@@ -17,7 +17,7 @@ constexpr uint16_t HEIGHT = 1080;
 const char* OUTPUT_NAME = "Test";
 
 const char* OUTPUT_DIRECTORY = "Output";
-const char* SCENE_PATH = ""; //"Scenes/TestScenes/scene3.test";// "Scenes/HW3/scene7.test";
+const char* SCENE_PATH = "";// "Scenes/HW3/scene4-ambient.test";//"Scenes/TestScenes/scene3.test";//
 
 #define ENABLE_DEBUG_SCENE 1
 
@@ -31,10 +31,10 @@ namespace EDX {
     };
 }
 
-bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData);
-EDX::Maths::Vector3f OrientRay(const uint32_t x, const uint32_t y, const EDX::RenderData& renderData);
 EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData);
+EDX::Maths::Vector3f OrientRay(const uint32_t x, const uint32_t y, const EDX::RenderData& renderData);
 void ExportImage(const EDX::Image& img, const std::string& outputName, const float gamma = 1.0f);
+bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData);
 
 int main() {
     EDX::Log::Status("EDX UC San Diego CS-168 Rendering 2 Coursework\nEwan Burnett - 2024\n");
@@ -54,7 +54,7 @@ int main() {
         //Camera
         {
             EDX::Maths::Vector3f lookFrom = { 0.0f,0.0f, 0.0f };
-            EDX::Maths::Vector3f lookAt = { 0.0f, 0.0f, 10.0f };
+            EDX::Maths::Vector3f lookAt = { 0.0f, 0.0f, 1.0f };
             EDX::Maths::Vector3f up = { 0.0f, 1.0f, 0.0f };
             renderData.camera = EDX::Camera(lookFrom, lookAt, up, EDX::Maths::DegToRad(60.0));
         }
@@ -67,46 +67,51 @@ int main() {
             mat.specular = { 1.0f, 1.0f, 1.0f, 1.0f };
             mat.shininess = 80.0f;
 
-            EDX::BlinnPhong mat2 = {};
-            mat2.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
-            mat2.emission = { 0.0f, 0.0f, 0.0f, 1.0f };
-            mat2.diffuse = { 0.1f, 0.7f, 0.3f, 1.0f };
-            mat2.specular = { 1.0f, 1.0f, 1.0f, 1.0f };
-            mat2.shininess = 12.0f;
+            EDX::Maths::Matrix4x4<float> transform = (EDX::Maths::Matrix4x4<float>::Scaling({ 1.0f, 1.0f, 1.0f }) * EDX::Maths::Matrix4x4<float>::ZRotationFromDegrees(15.0f)) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, 10.0f });
 
+            renderData.scene.PointLights().push_back({
+                { 0.0f, 0.5f, 1.0f }, {1.0f, 0.2f, 0.0f},  { 1.0f, 1.0f, 1.0f,1.0f }
+                });
 
-            /*
-            */
-            EDX::Plane p = { {0.0f, 1.0f, 0.0f},{0.0f, -100.0f, 0.0f} };
-            p.SetMaterial(mat2);
-            renderData.scene.Planes().push_back(
-                p
-            );
-            EDX::Sphere s = { {0.0f, 0.0f, 0.0f}, 1.0f };
-            EDX::Maths::Matrix4x4<float> transform = (EDX::Maths::Matrix4x4<float>::Scaling({ 1.0f, 0.5f, 1.0f }) * EDX::Maths::Matrix4x4<float>::YRotationFromDegrees(110.0f)) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, 0.0f });
-            s.SetWorldMatrix(transform);
-            renderData.scene.Spheres().push_back(s);
+            //Cube
+            std::vector<EDX::Maths::Vector3f> verts = {
+                {-1.0f, -1.0f, -1.0f},
+                {1.0f, -1.0f, -1.0f},
+                {1.0f, 1.0f, -1.0f},
+                {-1.0f, 1.0f, -1.0f},
+                {-1.0f, -1.0f, 1.0f},
+                {1.0f, -1.0f, 1.0f},
+                {1.0f, 1.0f, 1.0f},
+                {-1.0f, 1.0f, 1.0f}
+            };
 
-            EDX::Triangle t = { {-1.0f, -1.0f, 10.0f}, {-1.0f, 1.0f, 10.0f}, {1.0f, -1.0f, 10.0f} };
+            EDX::Triangle t = { {-1.0f, -1.0f, 0.0f}, {0.0f, 1.0f, 0.0f} ,{1.0f, -1.0f, 0.0f} };
+            t.SetMaterial(mat);
             t.SetWorldMatrix(transform);
-            renderData.scene.Triangles().push_back(t);
-            renderData.scene.Triangles().push_back(t);
+            //renderData.scene.Triangles().push_back(t);
 
+            renderData.scene.Triangles().push_back({ verts[0], verts[1], verts[5] });
+            renderData.scene.Triangles().push_back({ verts[0], verts[5], verts[4] });
+            renderData.scene.Triangles().push_back({ verts[3], verts[7], verts[6] });
+            renderData.scene.Triangles().push_back({ verts[3], verts[6], verts[2] });
+            renderData.scene.Triangles().push_back({ verts[1], verts[2], verts[6] });
+            renderData.scene.Triangles().push_back({ verts[1], verts[6], verts[5] });
+            renderData.scene.Triangles().push_back({ verts[0], verts[7], verts[3] });
+            renderData.scene.Triangles().push_back({ verts[0], verts[4], verts[7] });
+            renderData.scene.Triangles().push_back({ verts[0], verts[3], verts[2] });
+            renderData.scene.Triangles().push_back({ verts[0], verts[2], verts[1] });
+            renderData.scene.Triangles().push_back({ verts[4], verts[5], verts[6] });
+            renderData.scene.Triangles().push_back({ verts[4], verts[6], verts[7] });
 
-            renderData.scene.Spheres().push_back({
-                {10.0f, 0.0f, 60.0f}, 8.9f
-                });
-
-            renderData.scene.DirectionalLights().push_back({
-                { -1.0f, 0.6f, -1.0f }, { 1.0f, 1.0f, 1.0f,1.0f }
-                });
-            renderData.scene.DirectionalLights().push_back({
-                { 0.15f, -0.5f, -0.5f }, { 0.0f, 0.0f, 1.0f, 1.0f }
-                });
-
-            for (auto& s : renderData.scene.Spheres()) {
-                s.SetMaterial(mat);
+            for (auto& t : renderData.scene.Triangles()) {
+                t.SetWorldMatrix(transform);
+                t.SetMaterial(mat);
             }
+
+            EDX::Sphere s = { {0.0f, 0.0f, 0.0f}, 1.0f };
+            s.SetMaterial(mat);
+            s.SetWorldMatrix(transform);
+            //renderData.scene.Spheres().push_back(s);
         }
     }
 #else 
@@ -152,6 +157,152 @@ int main() {
 }
 
 
+EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData)
+{
+    EDX::Colour clr = { 0.0f, 0.0f, 0.0f, 1.0f };   //Output Pixel Colour - Black by default. 
+
+    //Compute a Direction for this ray
+    EDX::Maths::Vector3f rayDirection = OrientRay(x, y, renderData);
+
+    EDX::Ray r(renderData.camera.GetPosition(), rayDirection);
+
+
+    //Test Intersection in the scene
+    EDX::RayHit result = {};
+    if (renderData.scene.TraceRay(r, result))
+    {
+        //Apply shading based on the Material
+        if (result.pMat) {
+            const EDX::BlinnPhong m = *result.pMat;
+            clr = clr + m.ambient;
+            clr = clr + m.emission;
+
+            for (auto& light : renderData.scene.DirectionalLights()) {
+                const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
+
+                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
+
+                if (n_dot_l > 0.0f) {
+                    const EDX::Colour& k_Light = light.GetColour();
+
+                    const auto h = (lightDir + -rayDirection).Normalize();
+
+                    const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
+                    clr = clr + (k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess)));
+
+                }
+            }
+
+            for (auto& light : renderData.scene.PointLights()) {
+                EDX::Maths::Vector3f lightDir = (light.GetPosition() - result.point);
+                const float dist = lightDir.Length();
+                lightDir = lightDir.Normalize();
+
+                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
+
+                if (n_dot_l > 0.0f) {
+                    const EDX::Colour& k_Light = light.GetColour();
+
+                    const auto& att = light.GetAttenuation();
+
+                    float attenuation = att.x + (att.y * dist) + (att.z * dist * dist);
+                    const auto h = (lightDir + rayDirection).Normalize();
+
+                    const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
+                    clr = clr + ((k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess))) / attenuation);
+
+                }
+            }
+
+
+        }
+        else {
+            const EDX::Colour k_Ambient = { 0.10f, 0.10f, 0.10f, 0.0f };
+            clr = clr + k_Ambient;
+
+            for (auto& light : renderData.scene.DirectionalLights()) {
+                const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
+
+                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
+
+                if (n_dot_l > 0.0f) {
+                    const EDX::Colour& k_Light = light.GetColour();
+
+                    clr = clr + (k_Light * n_dot_l * k_Light.a);
+                }
+            } 
+            for (auto& light : renderData.scene.PointLights()) {
+                EDX::Maths::Vector3f lightDir = (light.GetPosition() - result.point);
+                const float dist = lightDir.Length();
+                lightDir = lightDir.Normalize();
+
+                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
+
+                if (n_dot_l > 0.0f) {
+                    const EDX::Colour& k_Light = light.GetColour();
+
+                    const auto& att = light.GetAttenuation();
+
+                    float attenuation = att.x + (att.y * dist) + (att.z * dist * dist);
+                    const auto h = (lightDir + rayDirection).Normalize();
+
+                    const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
+                    clr = clr + ((k_Light * n_dot_l * k_Light.a) / attenuation);
+
+                }
+            }
+
+        }
+        //clr = EDX::Colour(result.normal.x + 1, result.normal.y + 1, result.normal.z + 1, 1.0f) * 0.5f;    //Uncomment to view Normals
+    }
+
+    //Clamp the pixel colour to [0, 1]
+    clr.r = EDX::Maths::Clamp(clr.r, 0.0f, 1.0f);
+    clr.g = EDX::Maths::Clamp(clr.g, 0.0f, 1.0f);
+    clr.b = EDX::Maths::Clamp(clr.b, 0.0f, 1.0f);
+    clr.a = 1.0f;   //Ignore any transparency artifacts. 
+
+    return clr;
+}
+
+EDX::Maths::Vector3f OrientRay(const uint32_t x, const uint32_t y, const EDX::RenderData& renderData)
+{
+    const float alpha = 4.0f * tan(renderData.FoV.x / 2.0f) * ((x - ((float)renderData.dimensions.x / 2.0f)) / (float)renderData.dimensions.x / 2.0f);
+    const float beta = 4.0f * -tan(renderData.FoV.y / 2.0f) * ((y - ((float)renderData.dimensions.y / 2.0f)) / (float)renderData.dimensions.y / 2.0f);
+
+    EDX::Maths::Vector3f dir = {};
+    dir = (alpha * renderData.camera.GetRightVector()) + (beta * renderData.camera.GetUpVector()) + renderData.camera.GetForwardsVector();
+    return dir.Normalize();
+}
+
+void ExportImage(const EDX::Image& img, const std::string& outputName, const float gamma)
+{
+    EDX::Log::Status("Exporting Render to PNG...\n");
+    std::filesystem::create_directory(OUTPUT_DIRECTORY);
+
+    //Format the filename in relation to the output path. 
+    char buffer[0xff];
+    strcpy(buffer, OUTPUT_DIRECTORY);
+    strcat(buffer, "/");
+    if (!outputName.empty()) {
+        strcat(buffer, outputName.c_str());
+        strcat(buffer, "_");
+    }
+
+    //Format a timestamp for this render
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+    std::time_t time = std::chrono::system_clock::to_time_t(now);
+    std::tm tm = *std::localtime(&time);
+
+    size_t len = strlen(buffer);
+    strftime(buffer + len, 0xff - len, "%Y-%m-%d_%H-%M-%S.png", &tm);
+
+    EDX::Log::Status("Output Path: %s/%s\n", std::filesystem::current_path().generic_string().c_str(), buffer);
+    img.ExportToPNG(buffer, gamma);
+
+    EDX::Log::Status("Export Complete.\n");
+}
+
 bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
     EDX::Log::Status("Loading Scene \"%s\".\n", filePath);
 
@@ -179,7 +330,18 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
     material.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
 
     std::stack<EDX::Maths::Matrix4x4<float>> transformStack;
-    EDX::Maths::Matrix4x4<float> currentTransform = {};
+    std::vector<EDX::Maths::Matrix4x4<float>> currentTransforms;
+
+    EDX::Maths::Vector3f attenuation = {1.0f, 0.0f, 0.0f};
+
+    auto currentTransform = [&]() {
+        EDX::Maths::Matrix4x4<float> acc = {};
+        for (int i = currentTransforms.size(); i > 0; i--) {
+            acc = acc * currentTransforms[i - 1];
+        }
+
+        return acc;
+    };
 
 
     //Parse each line from the file. 
@@ -265,7 +427,7 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 float radius = std::stof(tokens[4]);
                 EDX::Sphere s = { position, radius };
                 s.SetMaterial(material);
-                s.SetWorldMatrix(EDX::Maths::Matrix4x4<float>::Transpose(currentTransform));
+                s.SetWorldMatrix(currentTransform());
                 renderData.scene.Spheres().push_back(s);
             }
             //The 'maxverts' command specifies the maximum number of vertices in this scene. 
@@ -299,7 +461,7 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
 
                 EDX::Triangle t = { vertices[a], vertices[b], vertices[c] };
                 t.SetMaterial(material);
-                t.SetWorldMatrix(EDX::Maths::Matrix4x4<float>::Transpose(currentTransform));
+                t.SetWorldMatrix(currentTransform());
                 renderData.scene.Triangles().push_back(t);
             }
             //The 'directional' command defines a Directional light
@@ -343,7 +505,7 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 }
                 material.ambient = a;
             }
-            else if (command == "emissive") {
+            else if (command == "emission") {
                 EDX::Colour e = {};
                 {
                     e.r = std::stof(tokens[1]);
@@ -367,10 +529,12 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 material.shininess = std::stof(tokens[1]);
             }
             else if (command == "pushTransform") {
-                transformStack.push(currentTransform);
+                transformStack.push(currentTransform());
+                currentTransforms.clear();
             }
             else if (command == "popTransform") {
-                currentTransform = transformStack.top();
+                currentTransforms.clear();
+                currentTransforms.push_back(transformStack.top());
                 transformStack.pop();
             }
 
@@ -378,16 +542,16 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 EDX::Maths::Vector3f t = {
                     std::stof(tokens[1]),
                     std::stof(tokens[2]),
-                    std::stof(tokens[3])
+                    -std::stof(tokens[3])
                 };
                 auto translation = EDX::Maths::Matrix4x4<float>::Translation(t);
-                currentTransform = EDX::Maths::Matrix4x4<float>::Transpose(translation) * currentTransform;
+                currentTransforms.push_back(translation);
             }
             else if (command == "rotate") {
                 const EDX::Maths::Vector3f axis = {
                     std::stof(tokens[1]),
                     std::stof(tokens[2]),
-                    std::stof(tokens[3])
+                    std::stof(tokens[3])   
                 };
 
                 const float angle = EDX::Maths::DegToRad(std::stof(tokens[4]));
@@ -396,7 +560,7 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 q = q.FromAxisAngle(axis, angle);
 
                 auto m = q.ToMatrix4x4();
-                currentTransform = EDX::Maths::Matrix4x4<float>::Transpose(m) * currentTransform;
+                currentTransforms.push_back(m);
             }
             else if (command == "scale") {
                 EDX::Maths::Vector3f s = {
@@ -404,12 +568,32 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 std::stof(tokens[2]),
                 std::stof(tokens[3])
                 };
-                //Manually apply the scaling for col. major
-                currentTransform[0] = currentTransform[0] * s.x; 
-                currentTransform[5] = currentTransform[5] * s.y; 
-                currentTransform[10] = currentTransform[10] * s.z; 
-            }
 
+                currentTransforms.push_back(EDX::Maths::Matrix4x4<float>::Scaling(s));
+            }
+            else if (command == "point") {
+                EDX::Maths::Vector3f position = {};
+                {
+                    position.x = std::stof(tokens[1]);
+                    position.y = std::stof(tokens[2]);
+                    position.z = std::stof(tokens[3]);
+                }
+
+                EDX::Colour colour = {};
+                {
+                    colour.r = std::stof(tokens[4]);
+                    colour.g = std::stof(tokens[5]);
+                    colour.b = std::stof(tokens[6]);
+                    colour.a = 1.0f;
+                }
+
+                renderData.scene.PointLights().push_back({ position, attenuation, colour });
+            }
+            else if (command == "attenuation") {
+                attenuation.x = std::stof(tokens[1]);
+                attenuation.y = std::stof(tokens[2]);
+                attenuation.z = std::stof(tokens[3]);
+            }
             else {
                 EDX::Log::Warning("Unknown Command \"%s\".\n", command.c_str());
             }
@@ -417,107 +601,4 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
     }
 
     return true;
-}
-
-EDX::Maths::Vector3f OrientRay(const uint32_t x, const uint32_t y, const EDX::RenderData& renderData)
-{
-    const float alpha = 4.0f * tan(renderData.FoV.x / 2.0f) * ((x - ((float)renderData.dimensions.x / 2.0f)) / (float)renderData.dimensions.x / 2.0f);
-    const float beta = 4.0f * -tan(renderData.FoV.y / 2.0f) * ((y - ((float)renderData.dimensions.y / 2.0f)) / (float)renderData.dimensions.y / 2.0f);
-
-    EDX::Maths::Vector3f dir = {};
-    dir = (alpha * renderData.camera.GetRightVector()) + (beta * renderData.camera.GetUpVector()) + renderData.camera.GetForwardsVector();
-    return dir.Normalize();
-}
-
-EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData)
-{
-    EDX::Colour clr = { 0.0f, 0.0f, 0.0f, 1.0f };   //Output Pixel Colour - Black by default. 
-
-    //Compute a Direction for this ray
-    EDX::Maths::Vector3f rayDirection = OrientRay(x, y, renderData);
-
-    EDX::Ray r(renderData.camera.GetPosition(), rayDirection);
-
-
-    //Test Intersection in the scene
-    EDX::RayHit result = {};
-    if (renderData.scene.TraceRay(r, result))
-    {
-        //Apply shading based on the Material
-        if (result.pMat) {
-            const EDX::BlinnPhong m = *result.pMat;
-            clr = clr + m.ambient;
-            clr = clr + m.emission;
-
-            for (auto& light : renderData.scene.DirectionalLights()) {
-                const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
-
-                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
-
-                if (n_dot_l > 0.0f) {
-                    const EDX::Colour& k_Light = light.GetColour();
-
-                    const auto h = (lightDir + -rayDirection).Normalize();
-
-                    const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
-                    clr = clr + (k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess)));
-
-                }
-            }
-
-        }
-        else {
-            const EDX::Colour k_Ambient = { 0.10f, 0.10f, 0.10f, 0.0f };
-            clr = clr + k_Ambient;
-
-            for (auto& light : renderData.scene.DirectionalLights()) {
-                const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
-
-                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
-
-                if (n_dot_l > 0.0f) {
-                    const EDX::Colour& k_Light = light.GetColour();
-
-                    clr = clr + (k_Light * n_dot_l * k_Light.a);
-                }
-            }
-        }
-        //clr = EDX::Colour(result.normal.x + 1, result.normal.y + 1, result.normal.z + 1, 1.0f) * 0.5f;    //Uncomment to view Normals
-    }
-
-    //Clamp the pixel colour to [0, 1]
-    clr.r = EDX::Maths::Clamp(clr.r, 0.0f, 1.0f);
-    clr.g = EDX::Maths::Clamp(clr.g, 0.0f, 1.0f);
-    clr.b = EDX::Maths::Clamp(clr.b, 0.0f, 1.0f);
-    clr.a = 1.0f;   //Ignore any transparency artifacts. 
-
-    return clr;
-}
-
-void ExportImage(const EDX::Image& img, const std::string& outputName, const float gamma)
-{
-    EDX::Log::Status("Exporting Render to PNG...\n");
-    std::filesystem::create_directory(OUTPUT_DIRECTORY);
-
-    //Format the filename in relation to the output path. 
-    char buffer[0xff];
-    strcpy(buffer, OUTPUT_DIRECTORY);
-    strcat(buffer, "/");
-    if (!outputName.empty()) {
-        strcat(buffer, outputName.c_str());
-        strcat(buffer, "_");
-    }
-
-    //Format a timestamp for this render
-    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-    std::time_t time = std::chrono::system_clock::to_time_t(now);
-    std::tm tm = *std::localtime(&time);
-
-    size_t len = strlen(buffer);
-    strftime(buffer + len, 0xff - len, "%Y-%m-%d_%H-%M-%S.png", &tm);
-
-    EDX::Log::Status("Output Path: %s/%s\n", std::filesystem::current_path().generic_string().c_str(), buffer);
-    img.ExportToPNG(buffer, gamma);
-
-    EDX::Log::Status("Export Complete.\n");
 }

@@ -75,3 +75,8 @@ std::vector<EDX::DirectionalLight>& EDX::Scene::DirectionalLights()
 {
     return m_DirectionalLights;
 }
+
+std::vector<EDX::PointLight>& EDX::Scene::PointLights()
+{
+    return m_PointLights; 
+}

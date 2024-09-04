@@ -7,49 +7,88 @@ EDX::Triangle::Triangle(Maths::Vector3f pointA, Maths::Vector3f pointB, Maths::V
     m_PointB = pointB;
     m_PointC = pointC;
 
-    m_Normal = EDX::Maths::Vector3f::Cross((m_PointB - m_PointA), (m_PointC - m_PointA)).Normalize();
+    //m_Normal = EDX::Maths::Vector3f::Cross((m_PointB - m_PointA), (m_PointC - m_PointA)).Normalize();
 }
 
 bool EDX::Triangle::Intersects(Ray ray, RayHit& hitResult) const
 {
-    Plane p(m_Normal, m_PointA);
-    p.SetWorldMatrix(m_World);
 
-    RayHit plane_hit = {};
-    if (!p.Intersects(ray, plane_hit)) {
+    //Apply the Inverse of this primitive's transformation to the ray. 
+    bool isInvertable = false;
+    const Maths::Matrix4x4<float> inverseTransform = EDX::Maths::Matrix4x4<float>::Inverse(m_World, isInvertable);
+    if (!isInvertable) {
         return false;
     }
 
-    //Compute Barycentric Coordinates using Cramer's rule.
-
-    Maths::Vector3f bary_coords = {};
     {
+        Maths::Vector4f inv_ray_origin = { ray.Origin().x, ray.Origin().y, ray.Origin().z, 1.0f };
+        Maths::Vector4f inv_ray_dir = { ray.Direction().x, ray.Direction().y, ray.Direction().z, 0.0f };
 
-        Maths::Vector3f v0 = m_PointB - m_PointA;
-        Maths::Vector3f v1 = m_PointC - m_PointA;
-        Maths::Vector3f v2 = plane_hit.point - m_PointA;
 
-        float d00 = Maths::Vector3f::Dot(v0, v0);
-        float d01 = Maths::Vector3f::Dot(v0, v1);
-        float d11 = Maths::Vector3f::Dot(v1, v1);
-        float d20 = Maths::Vector3f::Dot(v2, v0);
-        float d21 = Maths::Vector3f::Dot(v2, v1);
+        inv_ray_origin = inv_ray_origin * inverseTransform;
+        inv_ray_dir = inv_ray_dir * inverseTransform;
+        Maths::Vector3f d = { inv_ray_dir.x, inv_ray_dir.y, inv_ray_dir.z };
+        d = d.Normalize();
 
-        float denom = d00 * d11 - d01 * d01;
-
-        bary_coords.x = (d11 * d20 - d01 * d21) / denom;
-        bary_coords.z = (d00 * d21 - d01 * d20) / denom;
-        bary_coords.y = 1.0f - bary_coords.x - bary_coords.z;
+        ray = Ray({ inv_ray_origin.x, inv_ray_origin.y, inv_ray_origin.z }, d);
     }
 
-    if (!(bary_coords.x >= 0.0f && bary_coords.y >= 0.0f && (bary_coords.x + bary_coords.y) <= 1.0f))
-    {
+
+
+    //Compute intersection using the algorithm from Real-time Rendering ch22.8
+
+    Maths::Vector3f e1 = (m_PointB - m_PointA);
+    Maths::Vector3f e2 = (m_PointC - m_PointA);
+
+    Maths::Vector3f q = Maths::Vector3f::Cross(ray.Direction(), e2);
+
+    float a = Maths::Vector3f::Dot(e1, q);
+
+    if (a > -Maths::Epsilon && a < Maths::Epsilon) {
         return false;
     }
 
-    hitResult = plane_hit;
+    float f = 1.0f / a;
+
+    Maths::Vector3f s = ray.Origin() - m_PointA;
+    float u = f * (Maths::Vector3f::Dot(s, q));
+
+    if (u < 0.0f) {
+        return false;
+    }
+
+    Maths::Vector3f r = Maths::Vector3f::Cross(s, e1);
+    float v = f * (Maths::Vector3f::Dot(ray.Direction(), r));
+
+    if ((v < 0.0f) || (u + v > 1.0f)) {
+        return false;
+    }
+
+    float t = f * (Maths::Vector3f::Dot(e2, r));
+
+    if (t < 0.0f) {
+        return false;
+    }
+
+    hitResult.t = t;
+    {
+        const Maths::Vector3f p = ray.At(t);
+        Maths::Vector4f hit_point = { p.x, p.y, p.z, 1.0f };
+        hit_point = hit_point * m_World;
+        hitResult.point = { hit_point.x, hit_point.y, hit_point.z };
+    }
+
+    {
+        const Maths::Matrix4x4<float> invTranspose = Maths::Matrix4x4<float>::Transpose(inverseTransform);
+
+        Maths::Vector3f n = Maths::Vector3f::Cross(e1, e2).Normalize();
+        Maths::Vector4f normal = { n.x, n.y, n.z, 0.0f };
+        normal = normal * invTranspose;
+        hitResult.normal = Maths::Vector3f::Normalize({ normal.x, normal.y, normal.z });
+    }
+
     hitResult.pMat = const_cast<BlinnPhong*>(&m_Material);
 
-   
     return true;
+
 }
