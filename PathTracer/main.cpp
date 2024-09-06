@@ -17,7 +17,7 @@ constexpr uint16_t HEIGHT = 1080;
 const char* OUTPUT_NAME = "Test";
 
 const char* OUTPUT_DIRECTORY = "Output";
-const char* SCENE_PATH = "";// "Scenes/HW3/scene4-ambient.test";//"Scenes/TestScenes/scene3.test";//
+const char* SCENE_PATH = "Scenes/HW3/scene4-diffuse.test";
 
 #define ENABLE_DEBUG_SCENE 1
 
@@ -28,6 +28,7 @@ namespace EDX {
         Maths::Vector2<float> FoV;
         Camera camera;
         Scene scene;
+        uint32_t maxDepth = 1;
     };
 }
 
@@ -111,7 +112,11 @@ int main() {
             EDX::Sphere s = { {0.0f, 0.0f, 0.0f}, 1.0f };
             s.SetMaterial(mat);
             s.SetWorldMatrix(transform);
-            //renderData.scene.Spheres().push_back(s);
+            renderData.scene.Spheres().push_back(s);
+
+            EDX::Plane p = { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -10.0f} };
+            p.SetMaterial(mat);
+            renderData.scene.Planes().push_back(p);
         }
     }
 #else 
@@ -159,102 +164,132 @@ int main() {
 
 EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData)
 {
-    EDX::Colour clr = { 0.0f, 0.0f, 0.0f, 1.0f };   //Output Pixel Colour - Black by default. 
 
     //Compute a Direction for this ray
     EDX::Maths::Vector3f rayDirection = OrientRay(x, y, renderData);
 
     EDX::Ray r(renderData.camera.GetPosition(), rayDirection);
 
+    uint32_t currentDepth = 0;
 
-    //Test Intersection in the scene
-    EDX::RayHit result = {};
-    if (renderData.scene.TraceRay(r, result))
-    {
-        //Apply shading based on the Material
-        if (result.pMat) {
-            const EDX::BlinnPhong m = *result.pMat;
-            clr = clr + m.ambient;
-            clr = clr + m.emission;
+    EDX::Colour clr = { 0.0f, 0.0f, 0.0f, 1.0f };   //Output Pixel Colour - Black by default. 
 
-            for (auto& light : renderData.scene.DirectionalLights()) {
-                const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
+    auto rayColour = [&](EDX::Ray ray, uint32_t depth) {
 
-                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
-
-                if (n_dot_l > 0.0f) {
-                    const EDX::Colour& k_Light = light.GetColour();
-
-                    const auto h = (lightDir + -rayDirection).Normalize();
-
-                    const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
-                    clr = clr + (k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess)));
-
-                }
-            }
-
-            for (auto& light : renderData.scene.PointLights()) {
-                EDX::Maths::Vector3f lightDir = (light.GetPosition() - result.point);
-                const float dist = lightDir.Length();
-                lightDir = lightDir.Normalize();
-
-                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
-
-                if (n_dot_l > 0.0f) {
-                    const EDX::Colour& k_Light = light.GetColour();
-
-                    const auto& att = light.GetAttenuation();
-
-                    float attenuation = att.x + (att.y * dist) + (att.z * dist * dist);
-                    const auto h = (lightDir + rayDirection).Normalize();
-
-                    const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
-                    clr = clr + ((k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess))) / attenuation);
-
-                }
-            }
-
-
+        if (currentDepth >= renderData.maxDepth) {
+            return;
         }
-        else {
-            const EDX::Colour k_Ambient = { 0.10f, 0.10f, 0.10f, 0.0f };
-            clr = clr + k_Ambient;
 
-            for (auto& light : renderData.scene.DirectionalLights()) {
-                const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
+        currentDepth++;
 
-                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
+        //Test Intersection in the scene
+        EDX::RayHit result = {};
+        if (renderData.scene.TraceRay(r, result))
+        {
+            //Apply shading based on the Material
+            if (result.pMat) {
+                const EDX::BlinnPhong m = *result.pMat;
+                clr = clr + m.ambient;
+                clr = clr + m.emission;
 
-                if (n_dot_l > 0.0f) {
-                    const EDX::Colour& k_Light = light.GetColour();
+                for (auto& light : renderData.scene.DirectionalLights()) {
+                    const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
 
-                    clr = clr + (k_Light * n_dot_l * k_Light.a);
+                    EDX::RayHit shadowHit = {};
+                    bool isVisible = !renderData.scene.TraceRay({ result.point + (lightDir * (1.0f / 1000.0f)), lightDir }, shadowHit);  //Visible if Nothing is hit in the light's direction!
+
+                    if (!isVisible) {
+                        clr = { 0.0f, 0.0f, 0.0f, 1.0f };
+                        continue;
+                    }
+
+                    const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
+
+                    if (n_dot_l > 0.0f) {
+                        const EDX::Colour& k_Light = light.GetColour();
+
+                        const auto h = (lightDir + -rayDirection).Normalize();
+
+                        const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
+                        clr = clr + (k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess)));
+
+                    }
                 }
-            } 
-            for (auto& light : renderData.scene.PointLights()) {
-                EDX::Maths::Vector3f lightDir = (light.GetPosition() - result.point);
-                const float dist = lightDir.Length();
-                lightDir = lightDir.Normalize();
 
-                const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
+                for (auto& light : renderData.scene.PointLights()) {
+                    EDX::Maths::Vector3f lightDir = (light.GetPosition() - result.point);
+                    const float dist = lightDir.Length();
+                    lightDir = lightDir.Normalize();
 
-                if (n_dot_l > 0.0f) {
-                    const EDX::Colour& k_Light = light.GetColour();
+                    EDX::RayHit shadowHit = {};
+                    bool isVisible = !renderData.scene.TraceRay({ result.point + (lightDir * (1.0f / 1000.0f)), lightDir }, shadowHit); //Visible if Nothing is hit in the light's direction until the light's position. 
 
-                    const auto& att = light.GetAttenuation();
+                    if (!isVisible && shadowHit.t > 0.0f && shadowHit.t < dist) {
+                        clr = { 0.0f, 0.0f, 0.0f, 1.0f };
+                        continue;
+                    }
 
-                    float attenuation = att.x + (att.y * dist) + (att.z * dist * dist);
-                    const auto h = (lightDir + rayDirection).Normalize();
 
-                    const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
-                    clr = clr + ((k_Light * n_dot_l * k_Light.a) / attenuation);
+                    const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
 
+                    if (n_dot_l > 0.0f) {
+                        const EDX::Colour& k_Light = light.GetColour();
+
+                        const auto& att = light.GetAttenuation();
+
+                        float attenuation = att.x + (att.y * dist) + (att.z * dist * dist);
+                        const auto h = (lightDir + rayDirection).Normalize();
+
+                        const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
+                        clr = clr + ((k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess))) / attenuation);
+
+                    }
                 }
+
+
             }
+            else {
+                const EDX::Colour k_Ambient = { 0.10f, 0.10f, 0.10f, 0.0f };
+                clr = clr + k_Ambient;
 
+                for (auto& light : renderData.scene.DirectionalLights()) {
+                    const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
+
+                    const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
+
+                    if (n_dot_l > 0.0f) {
+                        const EDX::Colour& k_Light = light.GetColour();
+
+                        clr = clr + (k_Light * n_dot_l * k_Light.a);
+                    }
+                }
+                for (auto& light : renderData.scene.PointLights()) {
+                    EDX::Maths::Vector3f lightDir = (light.GetPosition() - result.point);
+                    const float dist = lightDir.Length();
+                    lightDir = lightDir.Normalize();
+
+                    const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
+
+                    if (n_dot_l > 0.0f) {
+                        const EDX::Colour& k_Light = light.GetColour();
+
+                        const auto& att = light.GetAttenuation();
+
+                        float attenuation = att.x + (att.y * dist) + (att.z * dist * dist);
+                        const auto h = (lightDir + rayDirection).Normalize();
+
+                        const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
+                        clr = clr + ((k_Light * n_dot_l * k_Light.a) / attenuation);
+
+                    }
+                }
+
+            }
+            //clr = EDX::Colour(result.normal.x + 1, result.normal.y + 1, result.normal.z + 1, 1.0f) * 0.5f;    //Uncomment to view Normals
         }
-        //clr = EDX::Colour(result.normal.x + 1, result.normal.y + 1, result.normal.z + 1, 1.0f) * 0.5f;    //Uncomment to view Normals
-    }
+    };
+
+    rayColour(r, currentDepth);
 
     //Clamp the pixel colour to [0, 1]
     clr.r = EDX::Maths::Clamp(clr.r, 0.0f, 1.0f);
@@ -332,7 +367,7 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
     std::stack<EDX::Maths::Matrix4x4<float>> transformStack;
     std::vector<EDX::Maths::Matrix4x4<float>> currentTransforms;
 
-    EDX::Maths::Vector3f attenuation = {1.0f, 0.0f, 0.0f};
+    EDX::Maths::Vector3f attenuation = { 1.0f, 0.0f, 0.0f };
 
     auto currentTransform = [&]() {
         EDX::Maths::Matrix4x4<float> acc = {};
@@ -542,7 +577,7 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 EDX::Maths::Vector3f t = {
                     std::stof(tokens[1]),
                     std::stof(tokens[2]),
-                    -std::stof(tokens[3])
+                    std::stof(tokens[3])
                 };
                 auto translation = EDX::Maths::Matrix4x4<float>::Translation(t);
                 currentTransforms.push_back(translation);
@@ -551,7 +586,7 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 const EDX::Maths::Vector3f axis = {
                     std::stof(tokens[1]),
                     std::stof(tokens[2]),
-                    std::stof(tokens[3])   
+                    std::stof(tokens[3])
                 };
 
                 const float angle = EDX::Maths::DegToRad(std::stof(tokens[4]));
@@ -593,6 +628,9 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
                 attenuation.x = std::stof(tokens[1]);
                 attenuation.y = std::stof(tokens[2]);
                 attenuation.z = std::stof(tokens[3]);
+            }
+            else if (command == "maxdepth") {
+                renderData.maxDepth = std::stof(tokens[1]);
             }
             else {
                 EDX::Log::Warning("Unknown Command \"%s\".\n", command.c_str());
