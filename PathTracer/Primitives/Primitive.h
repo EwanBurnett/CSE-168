@@ -24,6 +24,10 @@ namespace EDX {
 
         void SetWorldMatrix(Maths::Matrix4x4<float> world);
         Maths::Matrix4x4<float> GetWorldMatrix() const;
+
+
+        virtual Maths::Vector3f GetBoundsMin() const = 0;
+        virtual Maths::Vector3f GetBoundsMax() const = 0;
     protected:
         BlinnPhong m_Material;
         Maths::Matrix4x4<float> m_World;

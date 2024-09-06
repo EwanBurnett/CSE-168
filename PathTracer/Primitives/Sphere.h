@@ -15,8 +15,14 @@ namespace EDX {
 
         bool Intersects(Ray ray, RayHit& hitResult) const override;
 
+        Maths::Vector3f GetPosition() const;
         void SetPosition(Maths::Vector3f position);
-        void SetRadius(float radius); 
+
+        float GetRadius() const;
+        void SetRadius(float radius);
+
+        Maths::Vector3f GetBoundsMin() const override;
+        Maths::Vector3f GetBoundsMax() const override;
 
     private:
         Maths::Vector3f m_Position; 

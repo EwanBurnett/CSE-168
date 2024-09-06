@@ -11,6 +11,9 @@
 #include "../RayHit.h"
 #include "../Materials/BlinnPhong.h"
 namespace EDX {
+    class Sphere; 
+    class Triangle; 
+
     /**
      * @brief Represents a Box, using its minimum and maximum coordinates. 
     */
@@ -20,7 +23,9 @@ namespace EDX {
         Box(Maths::Vector3f boundsMin, Maths::Vector3f boundsMax);
 
         bool Intersects(Ray ray, RayHit& hitResult) const; 
-
+        bool Intersects(Sphere s);
+        bool Intersects(Triangle t);
+        
         void SetMaterial(BlinnPhong material); 
         BlinnPhong GetMaterial() const; 
 

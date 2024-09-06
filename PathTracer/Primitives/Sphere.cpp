@@ -69,12 +69,48 @@ bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult) const
     return true;
 }
 
+EDX::Maths::Vector3f EDX::Sphere::GetPosition() const
+{
+    return m_Position;
+}
+
 void EDX::Sphere::SetPosition(Maths::Vector3f position)
 {
     m_Position = position;
 }
 
+float EDX::Sphere::GetRadius() const
+{
+    return m_Radius;
+}
+
 void EDX::Sphere::SetRadius(float radius)
 {
     m_Radius = radius;
+}
+
+EDX::Maths::Vector3f EDX::Sphere::GetBoundsMin() const
+{
+    EDX::Maths::Vector3f min = {};
+
+    min.x = m_Position.x - m_Radius;
+    min.y = m_Position.y - m_Radius;
+    min.z = m_Position.z - m_Radius;
+
+    auto transformed = EDX::Maths::Vector4f({ min.x, min.y, min.z, 1.0f }) * m_World; 
+
+    return { transformed.x, transformed.y, transformed.z };
+}
+
+EDX::Maths::Vector3f EDX::Sphere::GetBoundsMax() const
+{
+    EDX::Maths::Vector3f max = {};
+
+    max.x = m_Position.x + m_Radius;
+    max.y = m_Position.y + m_Radius;
+    max.z = m_Position.z + m_Radius;
+
+    auto transformed = EDX::Maths::Vector4f({ max.x, max.y, max.z, 1.0f }) * m_World; 
+
+    return { transformed.x, transformed.y, transformed.z };
 }

@@ -92,3 +92,29 @@ bool EDX::Triangle::Intersects(Ray ray, RayHit& hitResult) const
     return true;
 
 }
+
+EDX::Maths::Vector3f EDX::Triangle::GetBoundsMin() const
+{
+    Maths::Vector3f min = {};
+
+    min.x = std::min(m_PointA.x, std::min(m_PointB.x, m_PointC.x));
+    min.y = std::min(m_PointA.y, std::min(m_PointB.y, m_PointC.y));
+    min.z = std::min(m_PointA.z, std::min(m_PointB.z, m_PointC.z));
+
+    auto transformed = EDX::Maths::Vector4f({ min.x, min.y, min.z, 1.0f }) * m_World;
+
+    return { transformed.x, transformed.y, transformed.z };
+}
+
+EDX::Maths::Vector3f EDX::Triangle::GetBoundsMax() const
+{
+    Maths::Vector3f max = {};
+
+    max.x = std::max(m_PointA.x, std::max(m_PointB.x, m_PointC.x));
+    max.y = std::max(m_PointA.y, std::max(m_PointB.y, m_PointC.y));
+    max.z = std::max(m_PointA.z, std::max(m_PointB.z, m_PointC.z));
+
+    auto transformed = EDX::Maths::Vector4f({ max.x, max.y, max.z, 1.0f }) * m_World;
+
+    return { transformed.x, transformed.y, transformed.z };
+}

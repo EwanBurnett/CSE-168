@@ -17,6 +17,11 @@ namespace EDX {
         Triangle(Maths::Vector3f pointA, Maths::Vector3f pointB, Maths::Vector3f pointC); 
 
         bool Intersects(Ray ray, RayHit& hitResult) const override;
+
+
+        Maths::Vector3f GetBoundsMin() const override;
+        Maths::Vector3f GetBoundsMax() const override;
+
     private: 
         Maths::Vector3f m_PointA; 
         Maths::Vector3f m_PointB; 

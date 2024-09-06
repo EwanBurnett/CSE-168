@@ -6,7 +6,7 @@ EDX::Scene::Scene()
  
 }
 
-bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult) const
+bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult, Acceleration::Grid& grid) const
 {
     //Trace the ray through each object in the scene. 
     //TODO: Acceleration
@@ -15,6 +15,23 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult) const
     RayHit result = {}; 
     bool anyHit = false; 
 
+    for (auto& cell : grid.GetCells())
+    {
+        RayHit cellHit = {};
+        if (cell.bounds.Intersects(r, cellHit)) {
+            for (uint64_t i = 0; i < cell.intersections.size(); i++) {
+                EDX::RayHit l_result = {};
+                if (cell.intersections[i]->Intersects(r, l_result)) {
+                    if (nearest > l_result.t) {
+                        nearest = l_result.t;
+                        result = l_result;
+                        anyHit = true;
+                    }
+                }
+            }
+        }
+    }
+    /*
     for (int i = 0; i < m_Planes.size(); i++)
     {
         EDX::RayHit l_result = {};
@@ -47,6 +64,7 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult) const
             }
         }
     }
+    */
 
     if (!anyHit) {
         return false;

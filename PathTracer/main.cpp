@@ -1,6 +1,7 @@
 #include "Utils/Logger.h"
 #include "Maths.h"
 #include "Utils/ProgressBar.h"
+#include "Primitives/Box.h"
 #include "Image.h"
 #include "Ray.h"
 #include "Camera.h"
@@ -11,26 +12,19 @@
 #include <math.h>
 #include <stack>
 #include <thread>
+#include <vector> 
+#include "RenderData.h"
 
 constexpr uint16_t WIDTH = 1920;
 constexpr uint16_t HEIGHT = 1080;
 const char* OUTPUT_NAME = "Test";
 
 const char* OUTPUT_DIRECTORY = "Output";
-const char* SCENE_PATH = "Scenes/HW3/scene4-diffuse.test";
+const char* SCENE_PATH = "Scenes/HW3/scene7.test";
 
 #define ENABLE_DEBUG_SCENE 1
 
-namespace EDX {
-    struct RenderData {
-        std::string outputName;
-        Maths::Vector2<uint16_t> dimensions;
-        Maths::Vector2<float> FoV;
-        Camera camera;
-        Scene scene;
-        uint32_t maxDepth = 1;
-    };
-}
+EDX::Acceleration::Grid g_AccelGrid;
 
 EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData);
 EDX::Maths::Vector3f OrientRay(const uint32_t x, const uint32_t y, const EDX::RenderData& renderData);
@@ -114,9 +108,11 @@ int main() {
             s.SetWorldMatrix(transform);
             renderData.scene.Spheres().push_back(s);
 
+            /*
             EDX::Plane p = { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -10.0f} };
             p.SetMaterial(mat);
             renderData.scene.Planes().push_back(p);
+            */
         }
     }
 #else 
@@ -125,6 +121,9 @@ int main() {
         return 1;
     }
 #endif
+
+    g_AccelGrid.BuildAccelerationStructure(renderData);
+
 
     EDX::Log::Status("Rendering Image \"%s\" (%d x %d)\n", renderData.outputName.c_str(), renderData.dimensions.x, renderData.dimensions.y);
     EDX::ProgressBar pb;
@@ -140,19 +139,47 @@ int main() {
     }
 
     //Render the Image
-    for (uint32_t y = 0; y < renderData.dimensions.y; y++) {
-        for (uint32_t x = 0; x < renderData.dimensions.x; x++) {
 
-            const EDX::Colour pixelColour = RenderPixel(x, y, renderData);
+    auto render = [&](EDX::Maths::Vector2<uint32_t> dim_x, EDX::Maths::Vector2<uint32_t> dim_y)
+    {
+        for (uint32_t y = dim_y.x; y < dim_y.y; y++) {
+            for (uint32_t x = dim_x.x; x < dim_x.y; x++) {
 
-            img.SetPixel(x, y, pixelColour);
+                const EDX::Colour pixelColour = RenderPixel(x, y, renderData);
+
+                img.SetPixel(x, y, pixelColour);
+            }
+
+            //Only update the progress bar in the outer part of the loop, as it's SLOW. 
+            float p = (float)(y * renderData.dimensions.x) / (float)(renderData.dimensions.x * renderData.dimensions.y);
+            pb.Update(p);
         }
+    };
 
-        //Only update the progress bar in the outer part of the loop, as it's SLOW. 
-        float p = (float)(y * renderData.dimensions.x) / (float)(renderData.dimensions.x * renderData.dimensions.y);
-        pb.Update(p);
+    const uint32_t num_threads = 1; 
+    std::vector<std::thread> threads(num_threads - 1); 
+    for (int i = 1; i < num_threads; i++) {
+        threads[i - 1] = std::thread([&](int idx) {
+
+            thread_local uint32_t startX = (renderData.dimensions.x / num_threads) * idx;
+            thread_local uint32_t countX = (renderData.dimensions.x / num_threads);
+            thread_local uint32_t startY = (renderData.dimensions.y / num_threads) * idx;
+            thread_local uint32_t countY = (renderData.dimensions.y / num_threads);
+
+            render({ startX, startX + countX }, { startY, startY + countY });
+
+            }, i);
+
+
     }
+    render(
+        { 0, renderData.dimensions.x - ((renderData.dimensions.x / num_threads) * (num_threads - 1)) }, 
+        { 0, renderData.dimensions.y - ((renderData.dimensions.y / num_threads) * (num_threads - 1)) }
+    ); 
 
+    for (auto& t : threads) {
+        t.join(); 
+    }
     const double render_time_s = pb.GetProgressTimer().Duration();
     EDX::Log::Success("\nRender Complete in %.8fs.\n", render_time_s);
 
@@ -174,6 +201,16 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
 
     EDX::Colour clr = { 0.0f, 0.0f, 0.0f, 1.0f };   //Output Pixel Colour - Black by default. 
 
+    {
+        EDX::Box box({ 100.0f, 100.0f, 100.0f }, { 300.0f, 300.0f, 300.0f });
+        EDX::RayHit boxHit = {};
+        bool rayBox = box.Intersects(r, boxHit);
+
+        if (!rayBox) {
+            int a = 0;
+        }
+    }
+
     auto rayColour = [&](EDX::Ray ray, uint32_t depth) {
 
         if (currentDepth >= renderData.maxDepth) {
@@ -184,7 +221,7 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
 
         //Test Intersection in the scene
         EDX::RayHit result = {};
-        if (renderData.scene.TraceRay(r, result))
+        if (renderData.scene.TraceRay(r, result, g_AccelGrid))
         {
             //Apply shading based on the Material
             if (result.pMat) {
@@ -196,7 +233,7 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
                     const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
 
                     EDX::RayHit shadowHit = {};
-                    bool isVisible = !renderData.scene.TraceRay({ result.point + (lightDir * (1.0f / 1000.0f)), lightDir }, shadowHit);  //Visible if Nothing is hit in the light's direction!
+                    bool isVisible = !renderData.scene.TraceRay({ result.point + (lightDir * (1.0f / 1000.0f)), lightDir }, shadowHit, g_AccelGrid);  //Visible if Nothing is hit in the light's direction!
 
                     if (!isVisible) {
                         clr = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -222,7 +259,7 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
                     lightDir = lightDir.Normalize();
 
                     EDX::RayHit shadowHit = {};
-                    bool isVisible = !renderData.scene.TraceRay({ result.point + (lightDir * (1.0f / 1000.0f)), lightDir }, shadowHit); //Visible if Nothing is hit in the light's direction until the light's position. 
+                    bool isVisible = !renderData.scene.TraceRay({ result.point + (lightDir * (1.0f / 1000.0f)), lightDir }, shadowHit, g_AccelGrid); //Visible if Nothing is hit in the light's direction until the light's position. 
 
                     if (!isVisible && shadowHit.t > 0.0f && shadowHit.t < dist) {
                         clr = { 0.0f, 0.0f, 0.0f, 1.0f };

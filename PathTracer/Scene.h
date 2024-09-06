@@ -14,6 +14,7 @@
 #include "Ray.h"
 #include "RayHit.h"
 #include <vector>
+#include "Acceleration/Grid.h"
 
 namespace EDX {
 
@@ -21,7 +22,7 @@ namespace EDX {
     public: 
         Scene(); 
 
-        bool TraceRay(const Ray& r, RayHit& hitResult) const; 
+        bool TraceRay(const Ray& r, RayHit& hitResult, EDX::Acceleration::Grid& grid) const; 
 
         std::vector<Plane>& Planes(); 
         std::vector<Triangle>& Triangles(); 
