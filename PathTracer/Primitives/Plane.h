@@ -18,6 +18,10 @@ namespace EDX {
 
         void SetNormal(Maths::Vector3f normal);
 
+        Maths::Vector3f GetBoundsMin() const override;
+        Maths::Vector3f GetBoundsMax() const override;
+
+
     private: 
         Maths::Vector3f m_Normal; 
         Maths::Vector3f m_Position; 

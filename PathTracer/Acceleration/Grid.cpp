@@ -9,6 +9,13 @@
 
 EDX::Acceleration::Grid::Grid()
 {
+    m_Dimensions = { 1, 1, 1 };
+}
+
+EDX::Acceleration::Grid::Grid(Maths::Vector3<uint32_t> dim)
+{
+    //TODO: Assert dimensions >= 1
+    m_Dimensions = dim; 
 }
 
 void EDX::Acceleration::Grid::BuildAccelerationStructure(EDX::RenderData& renderData) {
@@ -53,7 +60,7 @@ void EDX::Acceleration::Grid::BuildAccelerationStructure(EDX::RenderData& render
 
         //Generate u * v * w grid cells
         {
-            EDX::Maths::Vector3i gridDimensions = { 5, 5, 5 };
+            EDX::Maths::Vector3i gridDimensions = m_Dimensions;
             auto cellSize = (boundsMax - boundsMin);
             cellSize.x /= (float)gridDimensions.x;
             cellSize.y /= (float)gridDimensions.y;

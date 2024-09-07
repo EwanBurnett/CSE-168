@@ -31,7 +31,8 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult, Acceleration::Grid& g
             }
         }
     }
-    /*
+    
+    //Planes are an "infinite" primitive; test intersection seperately. 
     for (int i = 0; i < m_Planes.size(); i++)
     {
         EDX::RayHit l_result = {};
@@ -43,6 +44,8 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult, Acceleration::Grid& g
             }
         }
     }
+    
+    /*
     for (int i = 0; i < m_Triangles.size(); i++)
     {
         EDX::RayHit l_result = {};
@@ -65,6 +68,7 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult, Acceleration::Grid& g
         }
     }
     */
+    
 
     if (!anyHit) {
         return false;

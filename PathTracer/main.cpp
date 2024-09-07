@@ -12,19 +12,22 @@
 #include <math.h>
 #include <stack>
 #include <thread>
+#include <mutex>
 #include <vector> 
 #include "RenderData.h"
 
 constexpr uint16_t WIDTH = 1920;
 constexpr uint16_t HEIGHT = 1080;
 const char* OUTPUT_NAME = "Test";
-
+uint32_t NUM_THREADS = std::thread::hardware_concurrency();
 const char* OUTPUT_DIRECTORY = "Output";
 const char* SCENE_PATH = "Scenes/HW3/scene7.test";
+constexpr uint32_t MAX_DEPTH = 5;
+
 
 #define ENABLE_DEBUG_SCENE 1
 
-EDX::Acceleration::Grid g_AccelGrid;
+EDX::Acceleration::Grid g_AccelGrid({ 5, 5, 5 });
 
 EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData);
 EDX::Maths::Vector3f OrientRay(const uint32_t x, const uint32_t y, const EDX::RenderData& renderData);
@@ -45,6 +48,7 @@ int main() {
             renderData.outputName = OUTPUT_NAME;
             renderData.dimensions.x = WIDTH;
             renderData.dimensions.y = HEIGHT;
+            renderData.maxDepth = MAX_DEPTH;
         }
         //Camera
         {
@@ -62,12 +66,13 @@ int main() {
             mat.specular = { 1.0f, 1.0f, 1.0f, 1.0f };
             mat.shininess = 80.0f;
 
-            EDX::Maths::Matrix4x4<float> transform = (EDX::Maths::Matrix4x4<float>::Scaling({ 1.0f, 1.0f, 1.0f }) * EDX::Maths::Matrix4x4<float>::ZRotationFromDegrees(15.0f)) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, 10.0f });
+            EDX::Maths::Matrix4x4<float> transform = (EDX::Maths::Matrix4x4<float>::Scaling({ 1.0f, 1.0f, 1.0f }) * EDX::Maths::Matrix4x4<float>::ZRotationFromDegrees(0.0f)) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, 5.0f });
 
             renderData.scene.PointLights().push_back({
-                { 0.0f, 0.5f, 1.0f }, {1.0f, 0.2f, 0.0f},  { 1.0f, 1.0f, 1.0f,1.0f }
+                { 0.0f, 1.0f, 0.1f  }, {1.0f, 0.2f, 0.0f},  { 1.0f, 1.0f, 1.0f,1.0f }
                 });
 
+            /*
             //Cube
             std::vector<EDX::Maths::Vector3f> verts = {
                 {-1.0f, -1.0f, -1.0f},
@@ -103,10 +108,16 @@ int main() {
                 t.SetMaterial(mat);
             }
 
+            */
+
             EDX::Sphere s = { {0.0f, 0.0f, 0.0f}, 1.0f };
             s.SetMaterial(mat);
             s.SetWorldMatrix(transform);
             renderData.scene.Spheres().push_back(s);
+
+            EDX::Plane p = { {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, 100.0f} };
+            p.SetMaterial(mat);
+            renderData.scene.Planes().push_back(p);
 
             /*
             EDX::Plane p = { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -10.0f} };
@@ -139,7 +150,10 @@ int main() {
     }
 
     //Render the Image
+    std::atomic<uint32_t> pixelsProcessed(0);
+    uint32_t totalPixels = renderData.dimensions.x * renderData.dimensions.y;
 
+    std::mutex progressLock;
     auto render = [&](EDX::Maths::Vector2<uint32_t> dim_x, EDX::Maths::Vector2<uint32_t> dim_y)
     {
         for (uint32_t y = dim_y.x; y < dim_y.y; y++) {
@@ -148,38 +162,57 @@ int main() {
                 const EDX::Colour pixelColour = RenderPixel(x, y, renderData);
 
                 img.SetPixel(x, y, pixelColour);
+                pixelsProcessed++;
             }
 
             //Only update the progress bar in the outer part of the loop, as it's SLOW. 
-            float p = (float)(y * renderData.dimensions.x) / (float)(renderData.dimensions.x * renderData.dimensions.y);
-            pb.Update(p);
+            //Exclusive access across threads via a mutex
+            if (progressLock.try_lock())
+            {
+                float p = (float)(pixelsProcessed) / (float)(totalPixels);
+                pb.Update(p);
+                progressLock.unlock();
+            }
         }
     };
 
-    const uint32_t num_threads = 1; 
-    std::vector<std::thread> threads(num_threads - 1); 
+
+    const uint32_t num_threads = NUM_THREADS;
+    std::vector<std::thread> threads(num_threads - 1);
+
+    //Kick off worker threads, each rendering a column of the image. 
     for (int i = 1; i < num_threads; i++) {
         threads[i - 1] = std::thread([&](int idx) {
 
             thread_local uint32_t startX = (renderData.dimensions.x / num_threads) * idx;
             thread_local uint32_t countX = (renderData.dimensions.x / num_threads);
-            thread_local uint32_t startY = (renderData.dimensions.y / num_threads) * idx;
-            thread_local uint32_t countY = (renderData.dimensions.y / num_threads);
+            thread_local uint32_t startY = 0;
+            thread_local uint32_t countY = renderData.dimensions.y;
 
             render({ startX, startX + countX }, { startY, startY + countY });
 
             }, i);
-
-
     }
+
+    //Have the main thread render the remainder. 
     render(
-        { 0, renderData.dimensions.x - ((renderData.dimensions.x / num_threads) * (num_threads - 1)) }, 
-        { 0, renderData.dimensions.y - ((renderData.dimensions.y / num_threads) * (num_threads - 1)) }
-    ); 
+        { 0, renderData.dimensions.x - ((renderData.dimensions.x / num_threads) * (num_threads - 1)) },
+        { 0, renderData.dimensions.y }
+    );
 
-    for (auto& t : threads) {
-        t.join(); 
+    //Wait for the worker threads to complete.
+    uint32_t completeThreads = 0;
+    while (completeThreads < (num_threads - 1)) {
+        for (auto& t : threads) {
+            if (t.joinable()) {
+                t.join();
+                completeThreads++;
+            }
+
+        }
     }
+
+    //Report 
     const double render_time_s = pb.GetProgressTimer().Duration();
     EDX::Log::Success("\nRender Complete in %.8fs.\n", render_time_s);
 
@@ -201,23 +234,16 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
 
     EDX::Colour clr = { 0.0f, 0.0f, 0.0f, 1.0f };   //Output Pixel Colour - Black by default. 
 
-    {
-        EDX::Box box({ 100.0f, 100.0f, 100.0f }, { 300.0f, 300.0f, 300.0f });
-        EDX::RayHit boxHit = {};
-        bool rayBox = box.Intersects(r, boxHit);
+    auto rayColour = [&](EDX::Ray ray, uint32_t depth) -> EDX::Colour {
 
-        if (!rayBox) {
-            int a = 0;
-        }
-    }
-
-    auto rayColour = [&](EDX::Ray ray, uint32_t depth) {
-
-        if (currentDepth >= renderData.maxDepth) {
-            return;
+        if (depth >= renderData.maxDepth) {
+            return { 0.0f, 0.0f, 0.0f, 0.0f };
         }
 
         currentDepth++;
+
+
+        EDX::Colour c = { 0.0f, 0.0f, 0.0f, 0.0f };
 
         //Test Intersection in the scene
         EDX::RayHit result = {};
@@ -226,8 +252,8 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
             //Apply shading based on the Material
             if (result.pMat) {
                 const EDX::BlinnPhong m = *result.pMat;
-                clr = clr + m.ambient;
-                clr = clr + m.emission;
+                c = c + m.ambient;
+                c = c + m.emission;
 
                 for (auto& light : renderData.scene.DirectionalLights()) {
                     const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
@@ -236,7 +262,7 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
                     bool isVisible = !renderData.scene.TraceRay({ result.point + (lightDir * (1.0f / 1000.0f)), lightDir }, shadowHit, g_AccelGrid);  //Visible if Nothing is hit in the light's direction!
 
                     if (!isVisible) {
-                        clr = { 0.0f, 0.0f, 0.0f, 1.0f };
+                        c = { 0.0f, 0.0f, 0.0f, 1.0f };
                         continue;
                     }
 
@@ -248,7 +274,7 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
                         const auto h = (lightDir + -rayDirection).Normalize();
 
                         const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
-                        clr = clr + (k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess)));
+                        c = c + (k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess)));
 
                     }
                 }
@@ -262,7 +288,7 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
                     bool isVisible = !renderData.scene.TraceRay({ result.point + (lightDir * (1.0f / 1000.0f)), lightDir }, shadowHit, g_AccelGrid); //Visible if Nothing is hit in the light's direction until the light's position. 
 
                     if (!isVisible && shadowHit.t > 0.0f && shadowHit.t < dist) {
-                        clr = { 0.0f, 0.0f, 0.0f, 1.0f };
+                        c = { 0.0f, 0.0f, 0.0f, 1.0f };
                         continue;
                     }
 
@@ -278,7 +304,7 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
                         const auto h = (lightDir + rayDirection).Normalize();
 
                         const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
-                        clr = clr + ((k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess))) / attenuation);
+                        c = c + ((k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess))) / attenuation);
 
                     }
                 }
@@ -287,7 +313,7 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
             }
             else {
                 const EDX::Colour k_Ambient = { 0.10f, 0.10f, 0.10f, 0.0f };
-                clr = clr + k_Ambient;
+                c = c + k_Ambient;
 
                 for (auto& light : renderData.scene.DirectionalLights()) {
                     const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
@@ -297,7 +323,7 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
                     if (n_dot_l > 0.0f) {
                         const EDX::Colour& k_Light = light.GetColour();
 
-                        clr = clr + (k_Light * n_dot_l * k_Light.a);
+                        c = c + (k_Light * n_dot_l * k_Light.a);
                     }
                 }
                 for (auto& light : renderData.scene.PointLights()) {
@@ -316,17 +342,19 @@ EDX::Colour RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& ren
                         const auto h = (lightDir + rayDirection).Normalize();
 
                         const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
-                        clr = clr + ((k_Light * n_dot_l * k_Light.a) / attenuation);
+                        c = c + ((k_Light * n_dot_l * k_Light.a) / attenuation);
 
                     }
                 }
 
             }
-            //clr = EDX::Colour(result.normal.x + 1, result.normal.y + 1, result.normal.z + 1, 1.0f) * 0.5f;    //Uncomment to view Normals
+            //c = EDX::Colour(result.normal.x + 1, result.normal.y + 1, result.normal.z + 1, 1.0f) * 0.5f;    //Uncomment to view Normals
         }
+
+        return c;
     };
 
-    rayColour(r, currentDepth);
+    clr = clr + rayColour(r, currentDepth);
 
     //Clamp the pixel colour to [0, 1]
     clr.r = EDX::Maths::Clamp(clr.r, 0.0f, 1.0f);
@@ -427,7 +455,7 @@ bool LoadSceneFile(const char* filePath, EDX::RenderData& renderData) {
             continue;
         }
 
-        EDX::Log::Debug("%s\n", line.c_str());
+        //EDX::Log::Debug("%s\n", line.c_str());
 
         //Split the line into tokens, delimited by a space ' '.
         std::vector<std::string> tokens;

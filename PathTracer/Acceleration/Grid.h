@@ -12,7 +12,8 @@ namespace EDX {
     namespace Acceleration {
         class Grid {
         public:
-            Grid();
+            Grid(); 
+            Grid(Maths::Vector3<uint32_t> dim);
 
             struct Cell {
                 EDX::Box bounds;
@@ -25,6 +26,7 @@ namespace EDX {
 
         private:
             std::vector<EDX::Acceleration::Grid::Cell> m_Cells;
+            Maths::Vector3<uint32_t> m_Dimensions; 
         };
     }
 }

@@ -74,3 +74,13 @@ void EDX::Plane::SetNormal(Maths::Vector3f normal)
     m_Normal = normal;
 }
 
+EDX::Maths::Vector3f EDX::Plane::GetBoundsMin() const
+{
+    return { -Maths::Infinity, -Maths::Infinity, -Maths::Infinity }; 
+}
+
+EDX::Maths::Vector3f EDX::Plane::GetBoundsMax() const
+{
+    return { Maths::Infinity, Maths::Infinity, Maths::Infinity }; 
+}
+

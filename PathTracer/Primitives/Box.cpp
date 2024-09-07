@@ -20,19 +20,19 @@ bool EDX::Box::Intersects(Ray ray, RayHit& hitResult) const
 {
     /*
     //Test intersection using the Ray Slope method
-    Maths::Vector3f tMin = {}; 
+    Maths::Vector3f tMin = {};
     tMin.Set(-Maths::Infinity);
 
-    Maths::Vector3f tMax = {}; 
+    Maths::Vector3f tMax = {};
     tMax.Set(Maths::Infinity);
 
     //Loop over each axis (xyz)
     for(int i = 0; i < 3; i++){
-        float t_min = (tMin[i] - ray.Origin()[i]) / ray.Direction()[i]; 
+        float t_min = (tMin[i] - ray.Origin()[i]) / ray.Direction()[i];
         float t_max = (tMax[i] - ray.Origin()[i]) / ray.Direction()[i];
 
         if (t_min > t_max) {
-            std::swap(t_min, t_max); 
+            std::swap(t_min, t_max);
         }
 
 
@@ -43,25 +43,55 @@ bool EDX::Box::Intersects(Ray ray, RayHit& hitResult) const
     Maths::Vector3f tMin = (m_BoundsMin - ray.Origin()) / ray.Direction();
     Maths::Vector3f tMax = (m_BoundsMax - ray.Origin()) / ray.Direction();
 
+    if (tMin.x > tMax.x) {
+        std::swap(tMin.x, tMax.x);
+    }
+    if (tMin.y > tMax.y) {
+        std::swap(tMin.y, tMax.y);
+    }
+    if (tMin.z > tMax.z) {
+        std::swap(tMin.z, tMax.z);
+    }
+
+    float tNear = std::max(std::max(tMin.x, tMin.y), tMin.z);
+    float tFar = std::min(std::min(tMax.x, tMax.y), tMax.z);
+
+    if (tNear > tFar) {
+        return false;
+    }
+    float t = tNear;
+    if (t < 0.0f) {
+        t = tMax.x;
+        if (t < 0.0f) {
+            return false;
+        }
+    }
+
+    hitResult.t = t;
+    hitResult.point = ray.At(tNear);
+
+    return true;
+
+    /*
     //Intersect using Smits' Method
     {
         if ((tMin.x > tMax.y) || (tMin.y > tMax.x)) {
-            return false; 
+            return false;
         }
 
         if (tMin.y > tMin.x) {
-            tMin.x = tMin.y; 
+            tMin.x = tMin.y;
         }
         if (tMax.y < tMax.x) {
-            tMax.x = tMax.y; 
+            tMax.x = tMax.y;
         }
-    
+
         if ((tMin.x > tMax.z) || (tMin.z > tMax.x)) {
-            return false; 
+            return false;
         }
 
         if (tMin.z > tMin.x) {
-            tMin.x = tMin.z; 
+            tMin.x = tMin.z;
         }
         if (tMax.z < tMax.x) {
             tMax.x = tMax.z;
@@ -71,9 +101,10 @@ bool EDX::Box::Intersects(Ray ray, RayHit& hitResult) const
 
 
 
-    float t = std::min(std::min(tMin.x, tMin.y), tMin.z);
+    float t = tMin.x;
+    /*
     if (t < 0.0f) {
-        t = std::min(std::min(tMax.x, tMax.y), tMax.z);
+        t = tMax.x;
         if (t < 0.0f) {
             return false;
         }
@@ -81,6 +112,7 @@ bool EDX::Box::Intersects(Ray ray, RayHit& hitResult) const
 
     hitResult.t = t;
     hitResult.point = ray.At(t);
+    */
 
     return true;
 }
@@ -99,15 +131,15 @@ EDX::BlinnPhong EDX::Box::GetMaterial() const
 bool EDX::Box::Intersects(Sphere s)
 {
     //Retrieve the sphere's bounds
-    auto sphere_min = s.GetBoundsMin(); 
-    auto sphere_max = s.GetBoundsMax(); 
+    auto sphere_min = s.GetBoundsMin();
+    auto sphere_max = s.GetBoundsMax();
 
     //Compare each axis
 
     if (sphere_min.x <= m_BoundsMax.x && sphere_max.x >= m_BoundsMin.x) {
         if (sphere_min.y <= m_BoundsMax.y && sphere_max.y >= m_BoundsMin.y) {
             if (sphere_min.z <= m_BoundsMax.z && sphere_max.z >= m_BoundsMin.z) {
-                return true; 
+                return true;
             }
         }
     }
@@ -117,16 +149,16 @@ bool EDX::Box::Intersects(Sphere s)
 
 bool EDX::Box::Intersects(Triangle t)
 {
-  //Retrieve the tri's bounds
-    auto tri_min = t.GetBoundsMin(); 
-    auto tri_max = t.GetBoundsMax(); 
+    //Retrieve the tri's bounds
+    auto tri_min = t.GetBoundsMin();
+    auto tri_max = t.GetBoundsMax();
 
     //Compare each axis
 
     if (tri_min.x <= m_BoundsMax.x && tri_max.x >= m_BoundsMin.x) {
         if (tri_min.y <= m_BoundsMax.y && tri_max.y >= m_BoundsMin.y) {
             if (tri_min.z <= m_BoundsMax.z && tri_max.z >= m_BoundsMin.z) {
-                return true; 
+                return true;
             }
         }
     }
