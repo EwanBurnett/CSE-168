@@ -23,6 +23,7 @@ bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult) const
 
         inv_ray_origin = inv_ray_origin * inverseTransform;
         inv_ray_dir = inv_ray_dir * inverseTransform;
+
         Maths::Vector3f d = { inv_ray_dir.x, inv_ray_dir.y, inv_ray_dir.z };
         d = d.Normalize();
 
@@ -43,12 +44,15 @@ bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult) const
         return false;
     }
 
-    if (tmin < 0.0f) {
-        return false;
+    float t = tmin;
+    if (t < 0.0f) {
+        t = tmax;
+        if (t < 0.0f) {
+            return false;
+        }
     }
-
-    hitResult.t = tmin;
-    const Maths::Vector3f p = ray.At(tmin);
+    hitResult.t = t;
+    const Maths::Vector3f p = ray.At(t);
     //Compute transformed intersection point
     {
         Maths::Vector4f hit_point = { p.x, p.y, p.z, 1.0f };
@@ -97,7 +101,7 @@ EDX::Maths::Vector3f EDX::Sphere::GetBoundsMin() const
     min.y = m_Position.y - m_Radius;
     min.z = m_Position.z - m_Radius;
 
-    auto transformed = EDX::Maths::Vector4f({ min.x, min.y, min.z, 1.0f }) * m_World; 
+    auto transformed = EDX::Maths::Vector4f({ min.x, min.y, min.z, 1.0f }) * m_World;
 
     return { transformed.x, transformed.y, transformed.z };
 }
@@ -110,7 +114,7 @@ EDX::Maths::Vector3f EDX::Sphere::GetBoundsMax() const
     max.y = m_Position.y + m_Radius;
     max.z = m_Position.z + m_Radius;
 
-    auto transformed = EDX::Maths::Vector4f({ max.x, max.y, max.z, 1.0f }) * m_World; 
+    auto transformed = EDX::Maths::Vector4f({ max.x, max.y, max.z, 1.0f }) * m_World;
 
     return { transformed.x, transformed.y, transformed.z };
 }

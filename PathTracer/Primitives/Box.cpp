@@ -68,7 +68,7 @@ bool EDX::Box::Intersects(Ray ray, RayHit& hitResult) const
     }
 
     hitResult.t = t;
-    hitResult.point = ray.At(tNear);
+    hitResult.point = ray.At(t);
 
     return true;
 
@@ -128,17 +128,18 @@ EDX::BlinnPhong EDX::Box::GetMaterial() const
 
 
 
-bool EDX::Box::Intersects(Sphere s)
+bool EDX::Box::Intersects(EDX::Box b) const
 {
-    //Retrieve the sphere's bounds
-    auto sphere_min = s.GetBoundsMin();
-    auto sphere_max = s.GetBoundsMax();
-
     //Compare each axis
+    const auto& a_min = m_BoundsMin; 
+    const auto& a_max = m_BoundsMax; 
 
-    if (sphere_min.x <= m_BoundsMax.x && sphere_max.x >= m_BoundsMin.x) {
-        if (sphere_min.y <= m_BoundsMax.y && sphere_max.y >= m_BoundsMin.y) {
-            if (sphere_min.z <= m_BoundsMax.z && sphere_max.z >= m_BoundsMin.z) {
+    const auto& b_min = b.m_BoundsMin;
+    const auto& b_max = b.m_BoundsMax;
+
+    if (b_min.x <= m_BoundsMax.x || b_max.x >= m_BoundsMin.x) {
+        if (b_min.y <= m_BoundsMax.y || b_max.y >= m_BoundsMin.y) {
+            if (b_min.z <= m_BoundsMax.z || b_max.z >= m_BoundsMin.z) {
                 return true;
             }
         }
@@ -146,23 +147,3 @@ bool EDX::Box::Intersects(Sphere s)
 
     return false;
 }
-
-bool EDX::Box::Intersects(Triangle t)
-{
-    //Retrieve the tri's bounds
-    auto tri_min = t.GetBoundsMin();
-    auto tri_max = t.GetBoundsMax();
-
-    //Compare each axis
-
-    if (tri_min.x <= m_BoundsMax.x && tri_max.x >= m_BoundsMin.x) {
-        if (tri_min.y <= m_BoundsMax.y && tri_max.y >= m_BoundsMin.y) {
-            if (tri_min.z <= m_BoundsMax.z && tri_max.z >= m_BoundsMin.z) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-

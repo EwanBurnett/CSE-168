@@ -4,6 +4,7 @@
 #include <string>
 #include "Maths.h"
 #include "Camera.h"
+#include "Acceleration/Grid.h"
 #include "Scene.h"
 
 namespace EDX {
@@ -14,6 +15,7 @@ namespace EDX {
         EDX::Camera camera;
         Scene scene;
         uint32_t maxDepth = 1;
+        EDX::Acceleration::Grid accelGrid; 
     };
 }
 #endif

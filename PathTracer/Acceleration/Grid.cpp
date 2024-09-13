@@ -14,19 +14,23 @@ EDX::Acceleration::Grid::Grid()
 
 EDX::Acceleration::Grid::Grid(Maths::Vector3<uint32_t> dim)
 {
-    //TODO: Assert dimensions >= 1
-    m_Dimensions = dim; 
+    //TODO: Ensure Grid Dimensions are >= 1
+    m_Dimensions.x = Maths::Clamp(dim.x, 1u, UINT32_MAX);
+    m_Dimensions.y = Maths::Clamp(dim.y, 1u, UINT32_MAX);
+    m_Dimensions.z = Maths::Clamp(dim.z, 1u, UINT32_MAX);
+
+    //m_Dimensions = dim; 
 }
 
 void EDX::Acceleration::Grid::BuildAccelerationStructure(EDX::RenderData& renderData) {
-    EDX::Log::Status("Building Acceleration Structure...\n");
+    EDX::Log::Status("Building Grid Acceleration Structure.\nDimensions: [%d x %d x %d]\n", m_Dimensions.x, m_Dimensions.y, m_Dimensions.z);
     EDX::Timer timer;
     timer.Start();
     {
         EDX::Maths::Vector3f boundsMin = {};
-        boundsMin.Set(EDX::Maths::Infinity);
+        boundsMin.Set(0.0f);
         EDX::Maths::Vector3f boundsMax = {};
-        boundsMax.Set(-EDX::Maths::Infinity);
+        boundsMax.Set(0.0f);
 
         auto compareBounds = [&](const EDX::Maths::Vector3f min, const EDX::Maths::Vector3f max) {
             (min.x < boundsMin.x) ? boundsMin.x = min.x : 0;
@@ -84,18 +88,17 @@ void EDX::Acceleration::Grid::BuildAccelerationStructure(EDX::RenderData& render
         //Iterate over each primitive in the scene per-cell, and maintain a list of intersections with each grid cell. 
         {
             for (auto& cell : m_Cells) {
+                for (auto& sphere : renderData.scene.Spheres()) {
+                    if (cell.bounds.Intersects({ sphere.GetBoundsMin(), sphere.GetBoundsMax() })) {
+                        cell.intersections.push_back(&sphere);
+                    }
+                }
                 for (auto& tri : renderData.scene.Triangles()) {
-                    if (cell.bounds.Intersects(tri)) {
-
+                    if (cell.bounds.Intersects({ tri.GetBoundsMin(), tri.GetBoundsMax() })) {
                         cell.intersections.push_back(&tri);
                     }
                 }
 
-                for (auto& sphere : renderData.scene.Spheres()) {
-                    if (cell.bounds.Intersects(sphere)) {
-                        cell.intersections.push_back(&sphere);
-                    }
-                }
 
             }
         }

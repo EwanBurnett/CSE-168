@@ -22,7 +22,7 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult, Acceleration::Grid& g
             for (uint64_t i = 0; i < cell.intersections.size(); i++) {
                 EDX::RayHit l_result = {};
                 if (cell.intersections[i]->Intersects(r, l_result)) {
-                    if (nearest > l_result.t) {
+                    if (l_result.t > 0.0f && l_result.t < nearest) {  //TODO: DEPTH TEST BUG HERE FIX NEEDED 
                         nearest = l_result.t;
                         result = l_result;
                         anyHit = true;
@@ -45,31 +45,6 @@ bool EDX::Scene::TraceRay(const Ray& r, RayHit& hitResult, Acceleration::Grid& g
         }
     }
     
-    /*
-    for (int i = 0; i < m_Triangles.size(); i++)
-    {
-        EDX::RayHit l_result = {};
-        if (m_Triangles[i].Intersects(r, l_result)) {
-            if (nearest > l_result.t) {
-                nearest = l_result.t;
-                result = l_result;
-                anyHit = true;
-            }
-        }
-    }
-    for (int i = 0; i < m_Spheres.size(); i++) {
-        EDX::RayHit l_result = {};
-        if (m_Spheres[i].Intersects(r, l_result)) {
-            if (nearest > l_result.t) {
-                nearest = l_result.t;
-                result = l_result;
-                anyHit = true;
-            }
-        }
-    }
-    */
-    
-
     if (!anyHit) {
         return false;
     }

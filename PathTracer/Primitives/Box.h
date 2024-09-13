@@ -23,8 +23,7 @@ namespace EDX {
         Box(Maths::Vector3f boundsMin, Maths::Vector3f boundsMax);
 
         bool Intersects(Ray ray, RayHit& hitResult) const; 
-        bool Intersects(Sphere s);
-        bool Intersects(Triangle t);
+        bool EDX::Box::Intersects(EDX::Box b) const; 
         
         void SetMaterial(BlinnPhong material); 
         BlinnPhong GetMaterial() const; 
