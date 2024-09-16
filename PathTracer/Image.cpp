@@ -14,6 +14,11 @@ EDX::Image::Image(const uint16_t width, const uint16_t height)
     m_Dimensions = { width, height };
 }
 
+uint32_t EDX::Image::Size() const
+{
+    return m_Dimensions.x * m_Dimensions.y; 
+}
+
 void EDX::Image::SetPixel(const uint16_t x, const uint16_t y, Colour colour)
 {
     const uint32_t idx = y * m_Dimensions.x + x;

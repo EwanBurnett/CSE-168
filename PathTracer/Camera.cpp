@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include "Ray.h"
 
 EDX::Camera::Camera()
 {
@@ -29,6 +30,7 @@ EDX::Camera::Camera(Maths::Vector3f& lookFrom, Maths::Vector3f& lookAt, Maths::V
     m_Forwards = Maths::Vector3f::Normalize(lookAt - m_Position);
     m_Right = Maths::Vector3f::Cross(up.Normalize(), m_Forwards).Normalize();
     m_Up = Maths::Vector3f::Cross( m_Forwards, m_Right).Normalize();
+    //m_Up = up.Normalize(); 
 
 
    // Maths::Vector3f::Orthonormalize(m_Forwards, m_Up, m_Right);
@@ -110,4 +112,22 @@ void EDX::Camera::Walk(Maths::Vector3f& direction, float speed)
     dir = dir.Normalize();
 
     m_Position += dir * speed;
+}
+
+EDX::Ray EDX::Camera::GenRay(const Maths::Vector4i viewport, const uint32_t x, const uint32_t y) const
+{
+    static const Maths::Vector2i dim = { std::abs(viewport.g - viewport.r), std::abs(viewport.a - viewport.z) }; 
+
+    static const float aspectRatio = (float)dim.x / (float)dim.y;
+
+    static float FoV_X = (2.0f * atan(tan(m_FoVRadians * 0.5f) * aspectRatio));
+    static const float FoV_Y = m_FoVRadians; 
+
+    const float alpha = 4.0f * tan(FoV_X / 2.0f) * ((x - ((float)dim.x / 2.0f)) / (float)dim.x / 2.0f);
+    const float beta = 4.0f * -tan(FoV_Y / 2.0f) * ((y - ((float)dim.y / 2.0f)) / (float)dim.y / 2.0f);
+
+    Maths::Vector3f origin = m_Position; 
+    Maths::Vector3f dir = Maths::Vector3f::Normalize((alpha * m_Right) + (beta * m_Up) + m_Forwards);
+
+    return Ray(origin, dir); 
 }

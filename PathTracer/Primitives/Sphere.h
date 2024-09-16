@@ -10,10 +10,11 @@
 
 namespace EDX {
     class Sphere : public Primitive {
-    public: 
-        Sphere(Maths::Vector3f position, float radius); 
+    public:
+        Sphere(Maths::Vector3f position, float radius);
 
         bool Intersects(Ray ray, RayHit& hitResult) const override;
+        static bool Intersects(Ray ray, const Maths::Vector3f position, const float radius, const Maths::Matrix4x4<float>& world, RayHit& hitResult);
 
         Maths::Vector3f GetPosition() const;
         void SetPosition(Maths::Vector3f position);
@@ -25,8 +26,8 @@ namespace EDX {
         Maths::Vector3f GetBoundsMax() const override;
 
     private:
-        Maths::Vector3f m_Position; 
-        float m_Radius; 
+        Maths::Vector3f m_Position;
+        float m_Radius;
     };
 }
 

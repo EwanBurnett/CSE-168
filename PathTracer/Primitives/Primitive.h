@@ -14,21 +14,30 @@
 namespace EDX {
     class Primitive {
     public:
+        enum class EPrimitiveType {
+            NONE = 0, 
+            SPHERE,
+            TRIANGLE, 
+            PLANE,
+        };
+
         Primitive() = default;
         virtual ~Primitive() = default;
 
         virtual bool Intersects(Ray ray, RayHit& hitResult) const = 0;
 
         void SetMaterial(BlinnPhong material);
-        BlinnPhong GetMaterial() const;
+        BlinnPhong* GetMaterial() const;
 
         void SetWorldMatrix(Maths::Matrix4x4<float> world);
         Maths::Matrix4x4<float> GetWorldMatrix() const;
 
+        const EPrimitiveType GetType() const;
 
         virtual Maths::Vector3f GetBoundsMin() const = 0;
         virtual Maths::Vector3f GetBoundsMax() const = 0;
     protected:
+        EPrimitiveType m_Type;
         BlinnPhong m_Material;
         Maths::Matrix4x4<float> m_World;
     };

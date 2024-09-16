@@ -5,19 +5,21 @@
 #include <filesystem>
 #include <fstream>
 #include <stack>
+#include <list>
 
 
-constexpr bool g_ShowNormals = false;
+constexpr bool g_ShowNormals = false;   //Displays surface normals. 
+constexpr bool g_ShowShadows = false;   //Highlights shadows in Red.
 
 
 EDX::Colour EDX::RayTracer::RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData)
 {
+    const Maths::Vector4i viewport = {
+        0, renderData.dimensions.x,
+        0, renderData.dimensions.y
+    };
 
-    //Compute a Direction for this ray
-    EDX::Maths::Vector3f rayDirection = OrientRay(x, y, renderData);
-
-    EDX::Ray r(renderData.camera.GetPosition(), rayDirection);
-
+    Ray r = renderData.camera.GenRay(viewport, x, y);
 
     EDX::Colour clr = { 0.0f, 0.0f, 0.0f, 1.0f };   //Output Pixel Colour - Black by default. 
 
@@ -36,7 +38,7 @@ EDX::Colour EDX::RayTracer::RenderPixel(const uint32_t x, const uint32_t y, EDX:
 EDX::Colour EDX::RayTracer::RayColour(const EDX::Ray ray, uint32_t depth, EDX::RenderData& renderData) {
 
     //Bounce until Max Depth is reached
-    if (depth >= renderData.maxDepth) {
+    if (depth > renderData.maxDepth) {
         return { 0.0f, 0.0f, 0.0f, 0.0f };
     }
     depth++;
@@ -44,8 +46,8 @@ EDX::Colour EDX::RayTracer::RayColour(const EDX::Ray ray, uint32_t depth, EDX::R
 
     EDX::Colour c = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-    const float shadowBias = 0.00008f;
-    const float reflectionBias = 0.008f;
+    const float shadowBias = 0.0001f;
+    const float reflectionBias = 0.0001f;
 
     auto computeVisibility = [&](const Maths::Vector3f point, const Maths::Vector3f normal, const Maths::Vector3f lightDirection, const float lightDistance) {
 
@@ -55,11 +57,13 @@ EDX::Colour EDX::RayTracer::RayColour(const EDX::Ray ray, uint32_t depth, EDX::R
             //Add a small bias to prevent shadow acne. 
             bool shadowHitObject = renderData.scene.TraceRay({ point + (normal * shadowBias), lightDirection }, shadowHit, renderData.accelGrid); //Visible if Nothing is hit in the light's direction until the light's position. 
 
-            isVisible = !shadowHitObject;
-
-            //If we did hit something, check that the distance to the object is > the distance to the light. 
-            if (shadowHitObject) {
-                if (shadowHit.t >= 0.0f && shadowHit.t < (lightDistance - shadowBias)) { 
+            //If we didn't hit anything in the light's direction, then the point is visible to the light. 
+            if (!shadowHitObject) {
+                isVisible = true;
+            }
+            else {
+                //If we did hit something, check that the distance to the object is > the distance to the light. 
+                if (shadowHit.t > 0.0f && (lightDistance + shadowBias) < shadowHit.t) {
                     isVisible = true;
                 }
             }
@@ -84,142 +88,93 @@ EDX::Colour EDX::RayTracer::RayColour(const EDX::Ray ray, uint32_t depth, EDX::R
                     EDX::RayHit shadowHit = {};
                     const bool isVisible = computeVisibility(result.point, result.normal, lightDir, Maths::Infinity);
 
-                    /*
-                    //Debugging
-                   if (!isVisible) {
-                        c = { 1.0f, 0.0f, 0.0f, 1.0f };
-                        continue;
+                    //Shadow Debugging
+                    if constexpr (g_ShowShadows) {
+                        if (!isVisible) {
+                            c = { 1.0f, 0.0f, 0.0f, 1.0f };
+                            continue;
+                        }
                     }
-                    */
 
                     const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
 
 
+                    const Maths::Vector3f reflectDir = ray.Direction() - 2.0f * result.normal * (float)EDX::Vec3::Dot(ray.Direction(), result.normal);
                     if (n_dot_l > 0.0f) {
-                        const Maths::Vector3f reflectDir = (2.0f * n_dot_l) * result.normal - lightDir;
 
-                        //If the ray is in shadow, just reflect it. 
-                        if (!isVisible) {
-                            c = c + RayColour({ result.point, reflectDir + (result.normal * reflectionBias) }, depth, renderData) * m.specular;
-                        }
-                        else {
+                        //If the ray is in shadow,don't reflect it. 
+                        if (isVisible != false) {
 
                             const EDX::Colour& k_Light = light.GetColour();
 
-                            const auto h = (lightDir + ray.Origin()).Normalize();
+                            auto toEye = (ray.Origin() - result.point);
+                            toEye = toEye.Normalize();
+                            const auto h = (lightDir + toEye).Normalize();
+
                             const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
 
-                            c = c + (k_Light * n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess)));
+                            c = c + (k_Light * k_Light.a) * ((m.diffuse * n_dot_l) + (m.specular * std::powf(std::max(n_dot_h, 0.0f), m.shininess)));
 
-                            c = c + (RayColour({ result.point, reflectDir + (result.normal * reflectionBias) }, depth, renderData) * m.specular);
 
+                            c = c + (RayColour({ result.point + (result.normal * reflectionBias) , reflectDir }, depth, renderData) * m.specular);
                         }
                     }
                 }
 
                 for (auto& light : renderData.scene.PointLights()) {
                     EDX::Maths::Vector3f lightDir = (light.GetPosition() - result.point);
-                    const float dist = lightDir.Length();
+                    const float dist = lightDir.LengthSquared();
                     lightDir = lightDir.Normalize();
 
 
                     const bool isVisible = computeVisibility(result.point, result.normal, lightDir, dist);
 
-                    //DEBUGGING 
-                    /*
-                    if (!isVisible) {
-                        c = { 1.0f, 0.0f, 0.0f, 1.0f };
-                        continue;
+                    //Shadow Debugging
+                    if constexpr (g_ShowShadows) {
+                        if (!isVisible) {
+                            c = { 1.0f, 0.0f, 0.0f, 1.0f };
+                            continue;
+                        }
                     }
-                    */
 
 
                     const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
 
+                    const Maths::Vector3f reflectDir = ray.Direction() - 2.0f * result.normal * (float)EDX::Vec3::Dot(ray.Direction(), result.normal);
+
                     if (n_dot_l > 0.0f) {
 
-                        const Maths::Vector3f reflectDir = (2.0f * n_dot_l) * result.normal - lightDir;
-
-                        //If the ray is in shadow, just reflect it. 
-                        if (!isVisible) {
-                            c = c + RayColour({ result.point, reflectDir + (result.normal * reflectionBias) }, depth, renderData) * m.specular;
-                        }
-                        else {
+                        //If the ray is in shadow, don't reflect it. 
+                        if (isVisible != false) {
 
                             const EDX::Colour& k_Light = light.GetColour();
 
                             const auto& att = light.GetAttenuation();
-
                             float attenuation = att.x + (att.y * dist) + (att.z * dist * dist);
-                            const auto h = (lightDir + ray.Origin()).Normalize();
 
+                            auto toEye = (ray.Origin() - result.point);
+                            toEye = toEye.Normalize();
+                            const auto h = (lightDir + toEye).Normalize();
                             const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
-                            c = c + ((k_Light *  n_dot_l * k_Light.a) * (m.diffuse + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess))) / attenuation);
 
-                            c = c + (RayColour({ result.point, reflectDir + (result.normal * reflectionBias) }, depth, renderData) * m.specular);
+                            c = c + ((k_Light * k_Light.a / attenuation) * ((m.diffuse * n_dot_l) + (m.specular * std::powf(std::max(n_dot_h, 0.0f), m.shininess))));
+
+                            c = c + (RayColour({ result.point + (result.normal * reflectionBias), reflectDir }, depth, renderData) * m.specular);
                         }
                     }
                 }
 
 
             }
-            else {
-                const EDX::Colour k_Ambient = { 0.10f, 0.10f, 0.10f, 0.0f };
-                c = c + k_Ambient;
-
-                for (auto& light : renderData.scene.DirectionalLights()) {
-                    const EDX::Maths::Vector3f lightDir = light.GetDirection().Normalize();
-
-                    const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
-
-                    if (n_dot_l > 0.0f) {
-                        const EDX::Colour& k_Light = light.GetColour();
-
-                        c = c + (k_Light * n_dot_l * k_Light.a);
-                    }
-                }
-                for (auto& light : renderData.scene.PointLights()) {
-                    EDX::Maths::Vector3f lightDir = (light.GetPosition() - result.point);
-                    const float dist = lightDir.Length();
-                    lightDir = lightDir.Normalize();
-
-                    const float n_dot_l = EDX::Maths::Vector3f::Dot(result.normal, lightDir);
-
-                    if (n_dot_l > 0.0f) {
-                        const EDX::Colour& k_Light = light.GetColour();
-
-                        const auto& att = light.GetAttenuation();
-
-                        float attenuation = att.x + (att.y * dist) + (att.z * dist * dist);
-                        const auto h = (lightDir + ray.Origin()).Normalize();
-
-                        const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
-                        //c = c + ((k_Light * n_dot_l * k_Light.a) / attenuation);
-
-                    }
-                }
-
-            }
         }
         else {
-            c = EDX::Colour(result.normal.x + 1, result.normal.y + 1, result.normal.z + 1, 1.0f) * 0.5f;    //Uncomment to view Normals
+            c = EDX::Colour(result.normal.x + 1, result.normal.y + 1, result.normal.z + 1, 1.0f) * 0.5f;    //view Normals
         }
     }
 
     return c;
 
 }
-
-EDX::Maths::Vector3f EDX::RayTracer::OrientRay(const uint32_t x, const uint32_t y, const EDX::RenderData& renderData)
-{
-    const float alpha = 4.0f * tan(renderData.FoV.x / 2.0f) * ((x - ((float)renderData.dimensions.x / 2.0f)) / (float)renderData.dimensions.x / 2.0f);
-    const float beta = 4.0f * -tan(renderData.FoV.y / 2.0f) * ((y - ((float)renderData.dimensions.y / 2.0f)) / (float)renderData.dimensions.y / 2.0f);
-
-    EDX::Maths::Vector3f dir = {};
-    dir = (alpha * renderData.camera.GetRightVector()) + (beta * renderData.camera.GetUpVector()) + renderData.camera.GetForwardsVector();
-    return dir.Normalize();
-}
-
 
 bool EDX::RayTracer::LoadSceneFile(const char* filePath, RenderData& renderData)
 {
@@ -252,14 +207,14 @@ bool EDX::RayTracer::LoadSceneFile(const char* filePath, RenderData& renderData)
         material.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
 
         std::stack<EDX::Maths::Matrix4x4<float>> transformStack;
-        std::vector<EDX::Maths::Matrix4x4<float>> currentTransforms;
+        std::list<EDX::Maths::Matrix4x4<float>> currentTransforms;
 
         EDX::Maths::Vector3f attenuation = { 1.0f, 0.0f, 0.0f };
 
         auto currentTransform = [&]() {
             EDX::Maths::Matrix4x4<float> acc = {};
-            for (int i = currentTransforms.size(); i > 0; i--) {
-                acc = acc * currentTransforms[i - 1];
+            for (auto& t = currentTransforms.rbegin(); t != currentTransforms.rend(); t++) {
+                acc = acc * *t;
             }
 
             return acc;
@@ -277,7 +232,7 @@ bool EDX::RayTracer::LoadSceneFile(const char* filePath, RenderData& renderData)
                 continue;
             }
 
-            EDX::Log::Debug("%s\n", line.c_str());
+            //EDX::Log::Debug("%s\n", line.c_str());
 
             //Split the line into tokens, delimited by a space ' '.
             std::vector<std::string> tokens;
@@ -329,6 +284,7 @@ bool EDX::RayTracer::LoadSceneFile(const char* filePath, RenderData& renderData)
                     float fovDegrees = std::stof(tokens[10]);
 
                     renderData.camera = EDX::Camera(lookFrom, lookAt, up, EDX::Maths::DegToRad(fovDegrees));
+                    //transformStack.push(renderData.camera.GetViewMatrix());
                 }
                 //The 'output' command specifies an output name.
                 //Extensions are stripped, and a timestamp is added during export.
@@ -452,11 +408,11 @@ bool EDX::RayTracer::LoadSceneFile(const char* filePath, RenderData& renderData)
                 }
                 else if (command == "pushTransform") {
                     transformStack.push(currentTransform());
-                    currentTransforms.clear();
+                    //currentTransforms.clear();
                 }
                 else if (command == "popTransform") {
                     currentTransforms.clear();
-                    currentTransforms.push_back(transformStack.top());
+                    currentTransforms.push_front(transformStack.top());
                     transformStack.pop();
                 }
 

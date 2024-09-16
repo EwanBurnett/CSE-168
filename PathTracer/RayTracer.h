@@ -14,7 +14,7 @@ namespace EDX {
         static bool LoadSceneFile(const char* filePath, RenderData& renderData);
     private:
         static Colour RayColour(const Ray ray, uint32_t depth, RenderData& renderData);
-        static Maths::Vector3f OrientRay(const uint32_t x, const uint32_t y, const RenderData& renderData);
+        //static Maths::Vector3f OrientRay(const uint32_t x, const uint32_t y, const RenderData& renderData);
 
     };
 }

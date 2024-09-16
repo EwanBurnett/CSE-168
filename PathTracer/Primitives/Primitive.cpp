@@ -5,9 +5,9 @@ void EDX::Primitive::SetMaterial(BlinnPhong material)
     m_Material = material;
 }
 
-EDX::BlinnPhong EDX::Primitive::GetMaterial() const
+EDX::BlinnPhong* EDX::Primitive::GetMaterial() const
 {
-    return m_Material;
+    return const_cast<EDX::BlinnPhong*>(&m_Material);
 }
 
 void EDX::Primitive::SetWorldMatrix(Maths::Matrix4x4<float> world)
@@ -18,4 +18,9 @@ void EDX::Primitive::SetWorldMatrix(Maths::Matrix4x4<float> world)
 EDX::Maths::Matrix4x4<float> EDX::Primitive::GetWorldMatrix() const
 {
     return m_World;
+}
+
+const EDX::Primitive::EPrimitiveType EDX::Primitive::GetType() const
+{
+    return m_Type;
 }

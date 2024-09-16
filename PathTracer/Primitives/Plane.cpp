@@ -2,6 +2,7 @@
 
 EDX::Plane::Plane(Maths::Vector3f normal, Maths::Vector3f position)
 {
+    m_Type = EPrimitiveType::PLANE; 
     m_Normal = normal.Normalize();
     m_Position = position;
 

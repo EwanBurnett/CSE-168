@@ -6,10 +6,11 @@
  * @author Ewan Burnett (EwanBurnettSK@Outlook.com)
  * @date 2024-08-27
 */
-#include "Maths/Vector3.h"
-#include "Maths/Matrix.h"
+#include "Maths.h"
 
 namespace EDX {
+    class Ray; 
+
     class Camera {
     public: 
         Camera(); 
@@ -36,6 +37,8 @@ namespace EDX {
         void Look(float dx, float dy, float speed);
         void Walk(Maths::Vector3f& direction, float speed); 
 
+        //Viewport - {left, right, top, bottom}
+        Ray GenRay(const Maths::Vector4i viewport, const uint32_t x, const uint32_t y) const; 
     private:
         float m_FoVRadians;
 

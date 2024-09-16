@@ -12,7 +12,7 @@
 
 namespace EDX {
     struct RayHit {
-        float t = -Maths::Infinity;
+        float t = Maths::Infinity;
         Maths::Vector3f point;
         Maths::Vector3f normal;
         

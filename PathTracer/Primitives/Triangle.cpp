@@ -3,6 +3,7 @@
 
 EDX::Triangle::Triangle(Maths::Vector3f pointA, Maths::Vector3f pointB, Maths::Vector3f pointC)
 {
+    m_Type = EPrimitiveType::TRIANGLE;
     m_PointA = pointA;
     m_PointB = pointB;
     m_PointC = pointC;
@@ -12,8 +13,8 @@ EDX::Triangle::Triangle(Maths::Vector3f pointA, Maths::Vector3f pointB, Maths::V
 
 bool EDX::Triangle::Intersects(Ray ray, RayHit& hitResult) const
 {
-
     //Apply the Inverse of this primitive's transformation to the ray. 
+    //TODO: compute this externally to the intersection test, to allow for simple instancing. 
     bool isInvertable = false;
     const Maths::Matrix4x4<float> inverseTransform = EDX::Maths::Matrix4x4<float>::Inverse(m_World, isInvertable);
     if (!isInvertable) {
@@ -28,43 +29,46 @@ bool EDX::Triangle::Intersects(Ray ray, RayHit& hitResult) const
         inv_ray_origin = inv_ray_origin * inverseTransform;
         inv_ray_dir = inv_ray_dir * inverseTransform;
         Maths::Vector3f d = { inv_ray_dir.x, inv_ray_dir.y, inv_ray_dir.z };
-        d = d.Normalize();
+        //d = d.Normalize();
 
         ray = Ray({ inv_ray_origin.x, inv_ray_origin.y, inv_ray_origin.z }, d);
     }
 
-
-
-    //Compute intersection using the algorithm from Real-time Rendering ch22.8
+    
+    //Compute intersection using the Möller-Trumbore Algorithm
 
     Maths::Vector3f e1 = (m_PointB - m_PointA);
     Maths::Vector3f e2 = (m_PointC - m_PointA);
 
-    Maths::Vector3f q = Maths::Vector3f::Cross(ray.Direction(), e2);
+    Maths::Vector3f r_x_e2 = Maths::Vector3f::Cross(ray.Direction(), e2);
 
-    float a = Maths::Vector3f::Dot(e1, q);
+    float det = Maths::Vector3f::Dot(e1, r_x_e2);
 
-    if (a > -Maths::Epsilon && a < Maths::Epsilon) {
-        return false;
+    if (det < 0.0f) {
+        return false; //Triangle is back-facing
+    }
+    if (std::fabs(det) < Maths::Epsilon) {
+        return false;   //Ray is parallel to the triangle
     }
 
-    float f = 1.0f / a;
+    float inv_det = 1.0f / det;
 
     Maths::Vector3f s = ray.Origin() - m_PointA;
-    float u = f * (Maths::Vector3f::Dot(s, q));
+    float u = inv_det * Maths::Vector3f::Dot(s, r_x_e2);
 
-    if (u < 0.0f) {
+    if (u < 0.0f || u > 1.0f) {
         return false;
     }
 
-    Maths::Vector3f r = Maths::Vector3f::Cross(s, e1);
-    float v = f * (Maths::Vector3f::Dot(ray.Direction(), r));
+    Maths::Vector3f s_x_e1 = Maths::Vector3f::Cross(s, e1);
+    float v = inv_det * (Maths::Vector3f::Dot(ray.Direction(), s_x_e1));
 
     if ((v < 0.0f) || (u + v > 1.0f)) {
         return false;
     }
 
-    float t = f * (Maths::Vector3f::Dot(e2, r));
+    float t = inv_det * Maths::Vector3f::Dot(e2, s_x_e1);
+
 
     if (t < 0.0f) {
         return false;

@@ -3,15 +3,21 @@
 
 EDX::Sphere::Sphere(Maths::Vector3f position, float radius)
 {
+    m_Type = EPrimitiveType::SPHERE;
     m_Position = position;
     m_Radius = radius;
 }
 
 bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult) const
 {
+    return Intersects(ray, m_Position, m_Radius, m_World, hitResult);
+}
+
+bool EDX::Sphere::Intersects(Ray ray, const Maths::Vector3f position, const float radius, const Maths::Matrix4x4<float>& world, RayHit& hitResult)
+{
     //Apply the Inverse of this primitive's transformation to the ray. 
     bool isInvertable = false;
-    const Maths::Matrix4x4<float> inverseTransform = EDX::Maths::Matrix4x4<float>::Inverse(m_World, isInvertable);
+    const Maths::Matrix4x4<float> inverseTransform = EDX::Maths::Matrix4x4<float>::Inverse(world, isInvertable);
     if (!isInvertable) {
         return false;
     }
@@ -25,17 +31,16 @@ bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult) const
         inv_ray_dir = inv_ray_dir * inverseTransform;
 
         Maths::Vector3f d = { inv_ray_dir.x, inv_ray_dir.y, inv_ray_dir.z };
-        d = d.Normalize();
 
         ray = Ray({ inv_ray_origin.x, inv_ray_origin.y, inv_ray_origin.z }, d);
     }
 
-    //Solve the Quadratic to determine if the ray intersects with the sphere. 
-    const Maths::Vector3f toCenter = m_Position - ray.Origin();
+    //Solve the Quadratic to determine if the ray intersects with the sphere.
+    const Maths::Vector3f toCenter = ray.Origin() - position;
 
     const float a = Maths::Vector3f::Dot(ray.Direction(), ray.Direction());
-    const float b = -2.0f * Maths::Vector3f::Dot(ray.Direction(), toCenter);
-    const float c = Maths::Vector3f::Dot(toCenter, toCenter) - (m_Radius * m_Radius);
+    const float b = 2.0f * Maths::Vector3f::Dot(ray.Direction(), toCenter);
+    const float c = Maths::Vector3f::Dot(toCenter, toCenter) - (radius * radius);
 
     float tmin;
     float tmax;
@@ -51,12 +56,14 @@ bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult) const
             return false;
         }
     }
+
     hitResult.t = t;
     const Maths::Vector3f p = ray.At(t);
+
     //Compute transformed intersection point
     {
         Maths::Vector4f hit_point = { p.x, p.y, p.z, 1.0f };
-        hit_point = hit_point * m_World;
+        hit_point = hit_point * world;
         hitResult.point = { hit_point.x, hit_point.y, hit_point.z };
     }
 
@@ -64,12 +71,13 @@ bool EDX::Sphere::Intersects(Ray ray, RayHit& hitResult) const
     {
         const Maths::Matrix4x4<float> invTranspose = Maths::Matrix4x4<float>::Transpose(inverseTransform);
 
-        Maths::Vector3f n = (p - m_Position).Normalize();
+        Maths::Vector3f n = (p - position).Normalize(); // / m_Radius
+
         Maths::Vector4f normal = { n.x, n.y, n.z, 0.0f };
         normal = normal * invTranspose;
         hitResult.normal = Maths::Vector3f::Normalize({ normal.x, normal.y, normal.z });
     }
-    hitResult.pMat = const_cast<BlinnPhong*>(&m_Material);
+
     return true;
 }
 

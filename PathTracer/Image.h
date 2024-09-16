@@ -17,6 +17,7 @@ namespace EDX {
     public: 
         Image(const uint16_t width, const uint16_t height);
 
+        uint32_t Size() const; 
         void SetPixel(const uint16_t x, const uint16_t y, Colour colour); 
         Colour& GetPixel(const uint16_t x, const uint16_t y); 
 

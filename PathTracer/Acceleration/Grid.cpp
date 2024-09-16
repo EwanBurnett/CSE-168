@@ -88,14 +88,14 @@ void EDX::Acceleration::Grid::BuildAccelerationStructure(EDX::RenderData& render
         //Iterate over each primitive in the scene per-cell, and maintain a list of intersections with each grid cell. 
         {
             for (auto& cell : m_Cells) {
-                for (auto& sphere : renderData.scene.Spheres()) {
-                    if (cell.bounds.Intersects({ sphere.GetBoundsMin(), sphere.GetBoundsMax() })) {
-                        cell.intersections.push_back(&sphere);
-                    }
-                }
                 for (auto& tri : renderData.scene.Triangles()) {
                     if (cell.bounds.Intersects({ tri.GetBoundsMin(), tri.GetBoundsMax() })) {
                         cell.intersections.push_back(&tri);
+                    }
+                }
+                for (auto& sphere : renderData.scene.Spheres()) {
+                    if (cell.bounds.Intersects({ sphere.GetBoundsMin(), sphere.GetBoundsMax() })) {
+                        cell.intersections.push_back(&sphere);
                     }
                 }
 

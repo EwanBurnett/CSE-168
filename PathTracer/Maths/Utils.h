@@ -119,17 +119,20 @@ namespace EDX {
             if (discriminant < 0.0f) {
                 return false; //There are no valid roots, so just return. 
             }
-
-            float min = (-b - sqrtf(discriminant)) / 2.0f * a;
-            float max = (-b + sqrtf(discriminant)) / 2.0f * a;
-
-            if (min > max) {
-                std::swap(min, max);
+            else if (discriminant <= Maths::Epsilon) {
+                tmin = tmax = -0.5 * b / a; 
             }
+            else {
+                float min = (-b - sqrtf(discriminant)) / (2.0f * a);
+                float max = (-b + sqrtf(discriminant)) / (2.0f * a);
 
-            tmin = min; 
-            tmax = max; 
+                if (min > max) {
+                    std::swap(min, max);
+                }
 
+                tmin = min;
+                tmax = max;
+            }
             return true;
         }
     }
