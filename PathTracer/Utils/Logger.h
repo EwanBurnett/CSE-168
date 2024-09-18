@@ -9,6 +9,9 @@
 #include <cstdio>
 #include <cstdarg>
 
+#ifdef _MSC_VER
+#define __PRETTY_FUNCTION__ __FUNCSIG__
+#endif
 namespace EDX {
     /**
      * @brief Class wrapper for Logging Functions

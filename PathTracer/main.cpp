@@ -6,6 +6,8 @@
 #include "Utils/ProgressBar.h"
 #include "RayTracer.h"
 #include <filesystem>
+#include <thread>
+#include <future>
 
 #if ENABLE_VIEWER
 #include "Viewer.h"
@@ -24,18 +26,52 @@ void ExportImage(const EDX::Image& img, const std::string& outputName, const flo
 int main(int argc, char* argv[]) {
     EDX::Log::Status("EDX UC San Diego CS-168 Rendering 2 Coursework\nEwan Burnett - 2024\n");
 
+    std::string scenePath = SCENE_PATH;
+    if (argc > 1) {
+        scenePath = argv[1];
+    }
+
 #if ENABLE_VIEWER
     EDX::Log::Status("Viewer Enabled.\n");
     
     EDX::Viewer viewer;
 
     viewer.Init(); 
+
+    //TODO: When "Render" is pressed, Process it async to the viewer. 
+   auto worker = std::async([](const char* scenePath) {
+        //Load the scene 
+        EDX::RenderData renderData = {};
+
+        if (!EDX::RayTracer::LoadSceneFile(scenePath, renderData))
+        {
+            EDX::Log::Failure("Failed to load scene!\n");
+            return 1;
+        }
+
+        EDX::RayTracer rayTracer;
+        EDX::Image img(renderData.dimensions.x, renderData.dimensions.y);
+
+        //TODO: Configure via ImGui
+        rayTracer.Settings().numThreads = 1;// std::thread::hardware_concurrency();
+        rayTracer.Settings().gridDim = { 1, 1, 1 };
+        rayTracer.Settings().blockDim = { 64, 64 };
+
+        rayTracer.Render(renderData, img);
+
+        ExportImage(img, renderData.outputName);    //TODO: Reconfigure RenderData and RenderSettings
+        }, scenePath.c_str());
+
     while (viewer.PollEvents()) {
         viewer.Update(); 
     }
 
     viewer.Shutdown(); 
-
+    
+    //Wait for any pending renders to finish. 
+    if (worker.valid()) {
+        worker.wait();  
+    }
     
 #else
     //Load the scene 

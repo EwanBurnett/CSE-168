@@ -2,6 +2,7 @@
 #define __VIEWER_H
 
 #include "Viewer/Window.h"
+#include "Viewer/vkengine.h"
 
 namespace EDX {
     class Viewer {
@@ -13,6 +14,7 @@ namespace EDX {
         void Update();
     private:
         Window m_Window; 
+        VkEngine m_Engine; 
     };
 }
 

@@ -60,7 +60,7 @@ set(PATHTRACER_LIBRARIES Threads::Threads)
 set(PATHTRACER_INCLUDE_DIRS ${stb_SOURCE_DIR})
 
 if(${ENABLE_VIEWER})
-    set(PATHTRACER_SOURCES ${PATHTRACER_SOURCES} "Viewer.cpp" "Viewer.h" "Viewer/Window.h" "Viewer/Window.cpp" "${imgui_SOURCE_DIR}/imgui.cpp" "${imgui_SOURCE_DIR}/imgui.h" "${imgui_SOURCE_DIR}/imconfig.h" "${imgui_SOURCE_DIR}/imgui_demo.cpp" "${imgui_SOURCE_DIR}/imgui_draw.cpp" "${imgui_SOURCE_DIR}/imgui_tables.cpp" "${imgui_SOURCE_DIR}/imgui_widgets.cpp" "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp" "${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp" "${imguizmo_SOURCE_DIR}/imguizmo.cpp" "${imguizmo_SOURCE_DIR}/imguizmo.h" "${nfd_SOURCE_DIR}/src/nfd_common.c" )
+    set(PATHTRACER_SOURCES ${PATHTRACER_SOURCES} "Viewer.cpp" "Viewer.h" "Viewer/Window.h" "Viewer/Window.cpp" "Viewer/vkengine.h" "Viewer/vkengine.cpp" "${imgui_SOURCE_DIR}/imgui.cpp" "${imgui_SOURCE_DIR}/imgui.h" "${imgui_SOURCE_DIR}/imconfig.h" "${imgui_SOURCE_DIR}/imgui_demo.cpp" "${imgui_SOURCE_DIR}/imgui_draw.cpp" "${imgui_SOURCE_DIR}/imgui_tables.cpp" "${imgui_SOURCE_DIR}/imgui_widgets.cpp" "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp" "${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp" "${imguizmo_SOURCE_DIR}/imguizmo.cpp" "${imguizmo_SOURCE_DIR}/imguizmo.h" "${nfd_SOURCE_DIR}/src/nfd_common.c" )
 
     # Platform-specific sources
     if(${PLATFORM_WINDOWS})

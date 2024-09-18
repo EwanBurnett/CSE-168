@@ -63,46 +63,51 @@ void EDX::RayTracer::Render(EDX::RenderData& renderData, EDX::Image& img)
     };
 
 
-    //Split the image into Blocks to process. 
-    const EDX::Maths::Vector2i blockDim = m_Settings.blockDim;
-
     EDX::TS_Stack<EDX::Maths::Vector4i> imageBlocks;
+    EDX::Maths::Vector2i blockDim = m_Settings.blockDim;
 
-    const uint32_t blocks_y = (renderData.dimensions.y / blockDim.y);
-    const uint32_t remainder_x = renderData.dimensions.x % blockDim.x;
+    //Split the image into Blocks to process. 
+    {
+        //Account for badly sized block dimensions
+        blockDim.x = Maths::Clamp(blockDim.x, 0, (int)renderData.dimensions.x);
+        blockDim.y = Maths::Clamp(blockDim.y, 0, (int)renderData.dimensions.y);
 
-    const uint32_t blocks_x = (renderData.dimensions.x / blockDim.x);
-    const uint32_t remainder_y = renderData.dimensions.y % blockDim.y;
 
-    for (uint32_t y = 0; y < blocks_y + 1; y++) {
-        for (uint32_t x = 0; x < blocks_x + 1; x++) {
-            //Compute each block size
-            const int x_min = EDX::Maths::Clamp((int)blockDim.x * (int)x, 0, (int)renderData.dimensions.x);
-            const int x_max = EDX::Maths::Clamp(x_min + blockDim.x, 0, (int)renderData.dimensions.x);
-            if (x_min == x_max) {
-                continue;
+        const uint32_t blocks_y = (renderData.dimensions.y / blockDim.y);
+        const uint32_t remainder_x = renderData.dimensions.x % blockDim.x;
+
+        const uint32_t blocks_x = (renderData.dimensions.x / blockDim.x);
+        const uint32_t remainder_y = renderData.dimensions.y % blockDim.y;
+
+        for (uint32_t y = 0; y < blocks_y + 1; y++) {
+            for (uint32_t x = 0; x < blocks_x + 1; x++) {
+                //Compute each block size
+                const int x_min = EDX::Maths::Clamp((int)blockDim.x * (int)x, 0, (int)renderData.dimensions.x);
+                const int x_max = EDX::Maths::Clamp(x_min + blockDim.x, 0, (int)renderData.dimensions.x);
+                if (x_min == x_max) {
+                    continue;
+                }
+
+                const int y_min = EDX::Maths::Clamp((int)blockDim.y * (int)y, 0, (int)renderData.dimensions.y);
+                const int y_max = EDX::Maths::Clamp(y_min + blockDim.y, 0, (int)renderData.dimensions.y);
+
+                if (y_min == y_max) {
+                    continue;
+                }
+                EDX::Maths::Vector4i block = {  //TODO: convert Vec4i to Vec4<uint32_t>
+                    x_min, x_max,   //xmin, xmax
+                    y_min, y_max    //ymin, ymax
+                };
+
+
+                imageBlocks.Wait_And_Push(block);
             }
-
-            const int y_min = EDX::Maths::Clamp((int)blockDim.y * (int)y, 0, (int)renderData.dimensions.y);
-            const int y_max = EDX::Maths::Clamp(y_min + blockDim.y, 0, (int)renderData.dimensions.y);
-
-            if (y_min == y_max) {
-                continue;
-            }
-            EDX::Maths::Vector4i block = {  //TODO: convert Vec4i to Vec4<uint32_t>
-                x_min, x_max,   //xmin, xmax
-                y_min, y_max    //ymin, ymax
-            };
-
-
-            imageBlocks.Wait_And_Push(block);
         }
     }
-
     EDX::Log::Print("Num Blocks: %d\nBlock Dimensions: %d x %d\n", imageBlocks.Size(), blockDim.x, blockDim.y);
 
     //Kick off worker threads, each rendering sections of the image. 
-    const uint32_t num_threads = m_Settings.numThreads;
+    const uint32_t num_threads = (m_Settings.numThreads > 0) ? m_Settings.numThreads : 1;
     std::vector<std::thread> threads(num_threads - 1);  //Account for the main thread + (NUM_THREADS - 1) workers.
 
     EDX::Log::Print("Processing on %d Threads.\n", num_threads);
