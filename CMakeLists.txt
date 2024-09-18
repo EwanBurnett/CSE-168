@@ -8,5 +8,11 @@ project("CSE-168")
 
 set(CMAKE_CXX_STANDARD 17)
 
-option(BUILD_VIEWER "Enable the Viewer application" ON)
+if(WIN32)
+    set(PLATFORM_WINDOWS 1)
+elseif(UNIX AND NOT APPLE)
+    set(PLATFORM_UNIX 1)
+endif()
+
+option(ENABLE_VIEWER "Enable the Viewer application" 1)
 add_subdirectory(${CMAKE_SOURCE_DIR}/PathTracer/)
