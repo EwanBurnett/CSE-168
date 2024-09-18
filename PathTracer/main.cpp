@@ -19,6 +19,7 @@ constexpr uint32_t MAX_DEPTH = 2;
 
 #define ENABLE_DEBUG_SCENE 0
 
+
 void ExportImage(const EDX::Image& img, const std::string& outputName, const float gamma = 1.0f);
 
 int main(int argc, char* argv[]) {
