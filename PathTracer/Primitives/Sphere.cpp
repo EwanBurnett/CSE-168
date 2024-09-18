@@ -109,7 +109,7 @@ EDX::Maths::Vector3f EDX::Sphere::GetBoundsMin() const
     min.y = m_Position.y - m_Radius;
     min.z = m_Position.z - m_Radius;
 
-    auto transformed = EDX::Maths::Vector4f({ min.x, min.y, min.z, 1.0f }) * m_World;
+    EDX::Maths::Vector4f transformed = EDX::Maths::Vector4f({ min.x, min.y, min.z, 1.0f }) * m_World;
 
     return { transformed.x, transformed.y, transformed.z };
 }

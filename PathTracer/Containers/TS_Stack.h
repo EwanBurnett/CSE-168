@@ -9,61 +9,61 @@
  * @brief Thread-Safe Stack Container
 */
 namespace EDX {
-    template <typename T> 
+    template <typename T>
     class TS_Stack {
-    public: 
+    public:
 
         void Wait_And_Push(T& element) {
-            m_Lock.lock(); 
+            m_Lock.lock();
 
-            m_Stack.push(std::move(element)); 
+            m_Stack.push(std::move(element));
 
-            m_Lock.unlock(); 
+            m_Lock.unlock();
         }
 
         bool Try_Pop(T& element) {
             if (m_Lock.try_lock()) {
 
-                element = m_Stack.top(); 
-                m_Stack.pop(); 
+                element = m_Stack.top();
+                m_Stack.pop();
 
-                m_Lock.unlock(); 
-                return true; 
+                m_Lock.unlock();
+                return true;
             }
             else {
-                return false; 
+                return false;
             }
 
         }
-        T& Wait_And_Pop() {
-            m_Lock.lock(); 
+        T Wait_And_Pop() {
+            m_Lock.lock();
 
-            T elem = m_Stack.top(); 
-            m_Stack.pop(); 
+            T elem = m_Stack.top();
+            m_Stack.pop();
 
-            m_Lock.unlock(); 
+            m_Lock.unlock();
 
-            return elem; 
+            return elem;
         }
 
         uint64_t Size() const {
-            uint64_t size = 0u; 
-            
-            m_Lock.lock(); 
-            size = m_Stack.size(); 
-            m_Lock.unlock(); 
+            uint64_t size = 0u;
+
+            m_Lock.lock();
+            size = m_Stack.size();
+            m_Lock.unlock();
 
             return size;
         }
 
         bool Empty() const {
-            return (Size() == 0u); 
+            return (Size() == 0u);
         }
 
 
     private:
         std::stack<T> m_Stack;
-        mutable std::mutex m_Lock; 
+        mutable std::mutex m_Lock;
     };
 }
 #endif

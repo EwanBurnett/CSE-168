@@ -103,7 +103,7 @@ EDX::Colour EDX::RayTracer::RayColour(const EDX::Ray ray, uint32_t depth, EDX::R
                     if (n_dot_l > 0.0f) {
 
                         //If the ray is in shadow,don't reflect it. 
-                        if (isVisible != false) {
+                        if (isVisible) {
 
                             const EDX::Colour& k_Light = light.GetColour();
 
@@ -113,7 +113,7 @@ EDX::Colour EDX::RayTracer::RayColour(const EDX::Ray ray, uint32_t depth, EDX::R
 
                             const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
 
-                            c = c + (k_Light * k_Light.a) * ((m.diffuse * n_dot_l) + (m.specular * std::powf(std::max(n_dot_h, 0.0f), m.shininess)));
+                            c = c + (k_Light * k_Light.a) * ((m.diffuse * n_dot_l) + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess)));
 
 
                             c = c + (RayColour({ result.point + (result.normal * reflectionBias) , reflectDir }, depth, renderData) * m.specular);
@@ -145,7 +145,7 @@ EDX::Colour EDX::RayTracer::RayColour(const EDX::Ray ray, uint32_t depth, EDX::R
                     if (n_dot_l > 0.0f) {
 
                         //If the ray is in shadow, don't reflect it. 
-                        if (isVisible != false) {
+                        if (isVisible) {
 
                             const EDX::Colour& k_Light = light.GetColour();
 
@@ -157,7 +157,7 @@ EDX::Colour EDX::RayTracer::RayColour(const EDX::Ray ray, uint32_t depth, EDX::R
                             const auto h = (lightDir + toEye).Normalize();
                             const float n_dot_h = EDX::Maths::Vector3f::Dot(result.normal, h);
 
-                            c = c + ((k_Light * k_Light.a / attenuation) * ((m.diffuse * n_dot_l) + (m.specular * std::powf(std::max(n_dot_h, 0.0f), m.shininess))));
+                            c = c + ((k_Light * k_Light.a / attenuation) * ((m.diffuse * n_dot_l) + (m.specular * std::pow(std::max(n_dot_h, 0.0f), m.shininess))));
 
                             c = c + (RayColour({ result.point + (result.normal * reflectionBias), reflectDir }, depth, renderData) * m.specular);
                         }
@@ -213,7 +213,7 @@ bool EDX::RayTracer::LoadSceneFile(const char* filePath, RenderData& renderData)
 
         auto currentTransform = [&]() {
             EDX::Maths::Matrix4x4<float> acc = {};
-            for (auto& t = currentTransforms.rbegin(); t != currentTransforms.rend(); t++) {
+            for (auto t = currentTransforms.rbegin(); t != currentTransforms.rend(); t++) {
                 acc = acc * *t;
             }
 
@@ -229,6 +229,9 @@ bool EDX::RayTracer::LoadSceneFile(const char* filePath, RenderData& renderData)
             }
             //Ignore Comments
             if (line.at(0) == '#') {
+                continue;
+            }
+            if (line.find_first_not_of(" ") >= line.size()) {
                 continue;
             }
 

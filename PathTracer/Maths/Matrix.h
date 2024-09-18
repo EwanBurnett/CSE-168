@@ -50,14 +50,14 @@ namespace EDX {
                 return !(*this == rhs); 
             }
 
-            friend Vector4<T> operator *(Vector4<T>& lhs, const Matrix4x4& rhs) {
+            friend Vector4<T> operator *(const Vector4<T>& lhs, const Matrix4x4& rhs) {
                 Vector4<T> vec;
                 Matrix4x4 b = Matrix4x4::Transpose(rhs); 
 
-                vec[0] = lhs.Dot(b.vec[0]);
-                vec[1] = lhs.Dot(b.vec[1]);
-                vec[2] = lhs.Dot(b.vec[2]);
-                vec[3] = lhs.Dot(b.vec[3]);
+                vec[0] = Vector4f::Dot(lhs, b.vec[0]);
+                vec[1] = Vector4f::Dot(lhs, b.vec[1]);
+                vec[2] = Vector4f::Dot(lhs, b.vec[2]);
+                vec[3] = Vector4f::Dot(lhs, b.vec[3]);
             
                 return vec;
             }

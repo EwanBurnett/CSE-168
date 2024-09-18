@@ -13,11 +13,11 @@ constexpr uint16_t HEIGHT = 400;
 const char* OUTPUT_NAME = "Test";
 uint32_t NUM_THREADS = std::thread::hardware_concurrency();
 const char* OUTPUT_DIRECTORY = "Output";
-const char* SCENE_PATH = "Scenes/HW1/scene4-specular.test";
+const char* SCENE_PATH = "Scenes/HW1/scene5.test";
 constexpr uint32_t MAX_DEPTH = 2;
 
 
-#define ENABLE_DEBUG_SCENE 1
+#define ENABLE_DEBUG_SCENE 0
 
 void ExportImage(const EDX::Image& img, const std::string& outputName, const float gamma = 1.0f);
 
@@ -26,7 +26,7 @@ int main(int argc, char* argv[]) {
 
     //Load the scene 
     EDX::RenderData renderData = {};
-    renderData.accelGrid = EDX::Acceleration::Grid({ 1, 1, 1 });
+    renderData.accelGrid = EDX::Acceleration::Grid({ 10, 10, 10 });
 
     std::string scenePath = SCENE_PATH;
     if (argc > 1) {
@@ -35,7 +35,8 @@ int main(int argc, char* argv[]) {
 
     if (!EDX::RayTracer::LoadSceneFile(scenePath.c_str(), renderData))
 #if ENABLE_DEBUG_SCENE
-    {   //If we can't load a scene, load the debug scene instead. 
+
+    {   //If we can't load a scene, load the debug scene instead.
         //Context
         {
             renderData.outputName = OUTPUT_NAME;
@@ -64,7 +65,6 @@ int main(int argc, char* argv[]) {
         }
         //Scene
         {
-            /*
             {
                 {
                     EDX::BlinnPhong mat = {};
@@ -158,148 +158,149 @@ int main(int argc, char* argv[]) {
 
                 }
             }
-            */
-            /*
-            EDX::Sphere s = { {0.0f, 0.0f, 0.0f}, 1.0f };
-            s.SetMaterial(mat);
-            s.SetWorldMatrix(transform);
-            renderData.scene.Spheres().push_back(s);
-
-            EDX::Plane p = { {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, 100.0f} };
-            p.SetMaterial(mat);
-            //renderData.scene.Planes().push_back(p);
-
-            EDX::Plane p = { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -10.0f} };
-            p.SetMaterial(mat);
-            renderData.scene.Planes().push_back(p);
-    */
-            {
-                {
-                    EDX::BlinnPhong mat = {};
-                    mat.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
-                    mat.emission = { 0.0f, 0.0f, 0.0f, 1.0f };
-                    mat.diffuse = { 0.0f, 0.0f, 0.6f, 1.0f };
-                    mat.specular = { 0.1f, 0.1f, 0.1f, 1.0f };
-                    mat.shininess = 0.9f;
-
-                    EDX::BlinnPhong mat2 = {};
-                    mat2.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
-                    mat2.emission = { 0.0f, 0.3f, 0.0f, 1.0f };
-                    mat2.diffuse = { 0.0f, 0.5f, 0.0f, 1.0f };
-                    mat2.specular = { 1.0f, 1.0f, 1.0f, 1.0f };
-                    mat2.shininess = 0.6f;
-
-
-
-                    EDX::Maths::Quaternion q;
-                    EDX::Maths::Quaternion q2;
-                    q = EDX::Maths::Quaternion::FromAxisAngle(EDX::Maths::Vector3d{ 0.0, 0.0, 1.0 }, EDX::Maths::DegToRad(0.0));
-
-                    // EDX::Maths::Matrix4x4<float> transform = (EDX::Maths::Matrix4x4<float>::Scaling({ 1.0f, 1.0f, 1.0f }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 1.0f, 1.0f });
-
-                    renderData.scene.PointLights().push_back({
-                        { 0.0f, 5.0f, 0.0f }, {3.0f, 1.0f, 1.0f},  { 1.0f, 1.0f, 1.0f,1.0f }
-                        });
-
-                    //Cube
-                    std::vector<EDX::Maths::Vector3f> verts = {
-                        {-1.0f, -1.0f, -1.0f},
-                        {1.0f, -1.0f, -1.0f},
-                        {1.0f, 1.0f, -1.0f},
-                        {-1.0f, 1.0f, -1.0f},
-                        {-1.0f, -1.0f, 1.0f},
-                        {1.0f, -1.0f, 1.0f},
-                        {1.0f, 1.0f, 1.0f},
-                        {-1.0f, 1.0f, 1.0f}
-                    };
-
-                    auto addCube = [&](EDX::Maths::Matrix4x4<float> tfm) {
-
-                        renderData.scene.Triangles().push_back({ verts[0], verts[1], verts[5] });
-                        renderData.scene.Triangles().push_back({ verts[0], verts[5], verts[4] });
-                        renderData.scene.Triangles().push_back({ verts[3], verts[7], verts[6] });
-                        renderData.scene.Triangles().push_back({ verts[3], verts[6], verts[2] });
-                        renderData.scene.Triangles().push_back({ verts[1], verts[2], verts[6] });
-                        renderData.scene.Triangles().push_back({ verts[1], verts[6], verts[5] });
-                        renderData.scene.Triangles().push_back({ verts[0], verts[7], verts[3] });
-                        renderData.scene.Triangles().push_back({ verts[0], verts[4], verts[7] });
-                        renderData.scene.Triangles().push_back({ verts[0], verts[3], verts[2] });
-                        renderData.scene.Triangles().push_back({ verts[0], verts[2], verts[1] });
-                        renderData.scene.Triangles().push_back({ verts[4], verts[5], verts[6] });
-                        renderData.scene.Triangles().push_back({ verts[4], verts[6], verts[7] });
-
-                        for (auto& t : renderData.scene.Triangles()) {
-                            t.SetWorldMatrix(tfm);
-                            t.SetMaterial(mat);
-                        }
-                    };
-
-                    
-                    EDX::Maths::Matrix4x4<float> transform1 =
-  (EDX::Maths::Matrix4x4<float>::Scaling({ 0.5f, 0.5f, 0.5f}) *
-                        q.ToMatrix4x4()) *
-                        EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, 0.0f });
-                    addCube(transform1);
-
-                    EDX::Maths::Matrix4x4<float> transform2 =
-                     (EDX::Maths::Matrix4x4<float>::Scaling({ 0.5f, 0.5f, 0.5f }) *
-                        q.ToMatrix4x4()) *
-                        EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, .0f, 0.0f });
-                    addCube(transform2);
-
-
-
-                    {
-                        EDX::BlinnPhong mat = {};
-                        mat.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
-                        mat.emission = { 0.3f, 0.0f, 0.0f, 1.0f };
-                        mat.diffuse = { 0.5f, 0.0f, 0.0f, 1.0f };
-                        mat.specular = { 1.0f, 1.0f, 1.0f, 1.0f };
-                        mat.shininess = 0.6f;
-
-
-                        EDX::Maths::Quaternion q;
-                        EDX::Maths::Quaternion q2;
-                        q = EDX::Maths::Quaternion::FromAxisAngle(EDX::Maths::Vector3d{ 0.0, 0.0, 1.0 }, EDX::Maths::DegToRad(0.0));
-                        // q2 = EDX::Maths::Quaternion::FromAxisAngle(EDX::Maths::Vector3d{ 1.0, 0.0, 0.0 }, EDX::Maths::DegToRad(90.0));
-
-                        const float scl = 0.1;
-                        const float scl2 = 0.5f;
-
-                        EDX::Maths::Matrix4x4<float> transform;
-
-                        EDX::Sphere s({ 0.0f, 0.0f, 0.0f }, 1.0f);
-                        s.SetMaterial(mat);
-                        transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl2, scl, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 2.0f, 0.0f });
-                        s.SetWorldMatrix(transform);
-                        renderData.scene.Spheres().push_back(s);
-                        s.SetMaterial(mat2);
-                        transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl, scl2, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, -2.0f, 0.0f });
-                        s.SetWorldMatrix(transform);
-                        renderData.scene.Spheres().push_back(s);
-                        s.SetMaterial(mat);
-                        transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl2, scl, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 2.0f, 0.0f, 0.0f });
-                        s.SetWorldMatrix(transform);
-                        renderData.scene.Spheres().push_back(s);
-                        s.SetMaterial(mat2);
-                        transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl, scl2, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ -2.0f, 0.0f, 0.0f });
-                        s.SetWorldMatrix(transform);
-                        renderData.scene.Spheres().push_back(s);
-                        s.SetMaterial(mat);
-                        transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl2, scl, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, 2.0f });
-                        s.SetWorldMatrix(transform);
-                        renderData.scene.Spheres().push_back(s);
-                        s.SetMaterial(mat2);
-                        transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl, scl2, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, -2.0f });
-                        s.SetWorldMatrix(transform);
-                        renderData.scene.Spheres().push_back(s);
-
-                    }
-
-                }
-            }
         }
     }
+    /*
+    EDX::Sphere s = { {0.0f, 0.0f, 0.0f}, 1.0f };
+    s.SetMaterial(mat);
+    s.SetWorldMatrix(transform);
+    renderData.scene.Spheres().push_back(s);
+
+    EDX::Plane p = { {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f, 100.0f} };
+    p.SetMaterial(mat);
+    //renderData.scene.Planes().push_back(p);
+
+    EDX::Plane p = { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -10.0f} };
+    p.SetMaterial(mat);
+    renderData.scene.Planes().push_back(p);
+    {
+        {
+            EDX::BlinnPhong mat = {};
+            mat.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
+            mat.emission = { 0.0f, 0.0f, 0.0f, 1.0f };
+            mat.diffuse = { 0.0f, 0.0f, 0.6f, 1.0f };
+            mat.specular = { 0.1f, 0.1f, 0.1f, 1.0f };
+            mat.shininess = 0.9f;
+
+            EDX::BlinnPhong mat2 = {};
+            mat2.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
+            mat2.emission = { 0.0f, 0.3f, 0.0f, 1.0f };
+            mat2.diffuse = { 0.0f, 0.5f, 0.0f, 1.0f };
+            mat2.specular = { 1.0f, 1.0f, 1.0f, 1.0f };
+            mat2.shininess = 0.6f;
+
+
+
+            EDX::Maths::Quaternion q;
+            EDX::Maths::Quaternion q2;
+            q = EDX::Maths::Quaternion::FromAxisAngle(EDX::Maths::Vector3d{ 0.0, 0.0, 1.0 }, EDX::Maths::DegToRad(0.0));
+
+            // EDX::Maths::Matrix4x4<float> transform = (EDX::Maths::Matrix4x4<float>::Scaling({ 1.0f, 1.0f, 1.0f }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 1.0f, 1.0f });
+
+            renderData.scene.PointLights().push_back({
+                { 0.0f, 5.0f, 0.0f }, {3.0f, 1.0f, 1.0f},  { 1.0f, 1.0f, 1.0f,1.0f }
+                });
+
+            //Cube
+            std::vector<EDX::Maths::Vector3f> verts = {
+                {-1.0f, -1.0f, -1.0f},
+                {1.0f, -1.0f, -1.0f},
+                {1.0f, 1.0f, -1.0f},
+                {-1.0f, 1.0f, -1.0f},
+                {-1.0f, -1.0f, 1.0f},
+                {1.0f, -1.0f, 1.0f},
+                {1.0f, 1.0f, 1.0f},
+                {-1.0f, 1.0f, 1.0f}
+            };
+
+            auto addCube = [&](EDX::Maths::Matrix4x4<float> tfm) {
+
+                renderData.scene.Triangles().push_back({ verts[0], verts[1], verts[5] });
+                renderData.scene.Triangles().push_back({ verts[0], verts[5], verts[4] });
+                renderData.scene.Triangles().push_back({ verts[3], verts[7], verts[6] });
+                renderData.scene.Triangles().push_back({ verts[3], verts[6], verts[2] });
+                renderData.scene.Triangles().push_back({ verts[1], verts[2], verts[6] });
+                renderData.scene.Triangles().push_back({ verts[1], verts[6], verts[5] });
+                renderData.scene.Triangles().push_back({ verts[0], verts[7], verts[3] });
+                renderData.scene.Triangles().push_back({ verts[0], verts[4], verts[7] });
+                renderData.scene.Triangles().push_back({ verts[0], verts[3], verts[2] });
+                renderData.scene.Triangles().push_back({ verts[0], verts[2], verts[1] });
+                renderData.scene.Triangles().push_back({ verts[4], verts[5], verts[6] });
+                renderData.scene.Triangles().push_back({ verts[4], verts[6], verts[7] });
+
+                for (auto& t : renderData.scene.Triangles()) {
+                    t.SetWorldMatrix(tfm);
+                    t.SetMaterial(mat);
+                }
+            };
+
+
+            EDX::Maths::Matrix4x4<float> transform1 =
+(EDX::Maths::Matrix4x4<float>::Scaling({ 0.5f, 0.5f, 0.5f}) *
+                      q.ToMatrix4x4()) *
+                      EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, 0.0f });
+                  addCube(transform1);
+
+                  EDX::Maths::Matrix4x4<float> transform2 =
+                   (EDX::Maths::Matrix4x4<float>::Scaling({ 0.5f, 0.5f, 0.5f }) *
+                      q.ToMatrix4x4()) *
+                      EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, .0f, 0.0f });
+                  addCube(transform2);
+
+
+
+                  {
+                      EDX::BlinnPhong mat = {};
+                      mat.ambient = { 0.1f, 0.1f, 0.1f, 1.0f };
+                      mat.emission = { 0.3f, 0.0f, 0.0f, 1.0f };
+                      mat.diffuse = { 0.5f, 0.0f, 0.0f, 1.0f };
+                      mat.specular = { 1.0f, 1.0f, 1.0f, 1.0f };
+                      mat.shininess = 0.6f;
+
+
+                      EDX::Maths::Quaternion q;
+                      EDX::Maths::Quaternion q2;
+                      q = EDX::Maths::Quaternion::FromAxisAngle(EDX::Maths::Vector3d{ 0.0, 0.0, 1.0 }, EDX::Maths::DegToRad(0.0));
+                      // q2 = EDX::Maths::Quaternion::FromAxisAngle(EDX::Maths::Vector3d{ 1.0, 0.0, 0.0 }, EDX::Maths::DegToRad(90.0));
+
+                      const float scl = 0.1;
+                      const float scl2 = 0.5f;
+
+                      EDX::Maths::Matrix4x4<float> transform;
+
+                      EDX::Sphere s({ 0.0f, 0.0f, 0.0f }, 1.0f);
+                      s.SetMaterial(mat);
+                      transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl2, scl, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 2.0f, 0.0f });
+                      s.SetWorldMatrix(transform);
+                      renderData.scene.Spheres().push_back(s);
+                      s.SetMaterial(mat2);
+                      transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl, scl2, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, -2.0f, 0.0f });
+                      s.SetWorldMatrix(transform);
+                      renderData.scene.Spheres().push_back(s);
+                      s.SetMaterial(mat);
+                      transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl2, scl, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 2.0f, 0.0f, 0.0f });
+                      s.SetWorldMatrix(transform);
+                      renderData.scene.Spheres().push_back(s);
+                      s.SetMaterial(mat2);
+                      transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl, scl2, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ -2.0f, 0.0f, 0.0f });
+                      s.SetWorldMatrix(transform);
+                      renderData.scene.Spheres().push_back(s);
+                      s.SetMaterial(mat);
+                      transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl2, scl, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, 2.0f });
+                      s.SetWorldMatrix(transform);
+                      renderData.scene.Spheres().push_back(s);
+                      s.SetMaterial(mat2);
+                      transform = (EDX::Maths::Matrix4x4<float>::Scaling({ scl, scl2, scl }) * q.ToMatrix4x4()) * EDX::Maths::Matrix4x4<float>::Translation({ 0.0f, 0.0f, -2.0f });
+                      s.SetWorldMatrix(transform);
+                      renderData.scene.Spheres().push_back(s);
+
+                  }
+
+              }
+          }
+      }
+  }
+      */
 #else 
     {
         EDX::Log::Failure("Failed to load scene!\n");
@@ -308,7 +309,7 @@ int main(int argc, char* argv[]) {
 #endif
 
     EDX::Log::Print("Image Size: (%d x %d)\nMax Depth: %d\nTriangles: %d\nSpheres: %d\nDirectional Lights: %d\nPoint Lights: %d\n", renderData.dimensions.x, renderData.dimensions.y, renderData.maxDepth, renderData.scene.Triangles().size(), renderData.scene.Spheres().size(), renderData.scene.DirectionalLights().size(), renderData.scene.PointLights().size());
-    renderData.accelGrid.BuildAccelerationStructure(renderData);
+    renderData.accelGrid.Build(renderData);
 
 
     EDX::Log::Status("Rendering Image \"%s\" \n", renderData.outputName.c_str());
@@ -369,19 +370,24 @@ int main(int argc, char* argv[]) {
                 y_min, y_max    //ymin, ymax
             };
 
+
             imageBlocks.Wait_And_Push(block);
         }
     }
+
+    EDX::Log::Print("Num Blocks: %d\nBlock Dimensions: %d x %d\n", imageBlocks.Size(), blockDim.x, blockDim.y);
 
     //Kick off worker threads, each rendering sections of the image. 
     const uint32_t num_threads = NUM_THREADS;
     std::vector<std::thread> threads(num_threads - 1);  //Account for the main thread + (NUM_THREADS - 1) workers.
 
+    EDX::Log::Print("Processing on %d Threads.\n", num_threads);
+
     for (int i = 1; i < num_threads; i++) {
         threads[i - 1] = std::thread([&](int idx) {
             while (imageBlocks.Empty() == false) {
                 //Process a block of the image. 
-                auto block = imageBlocks.Wait_And_Pop();
+                const EDX::Maths::Vector4i block = imageBlocks.Wait_And_Pop();
                 render({ block.x, block.y }, { block.z, block.w });
             }
 
@@ -391,7 +397,7 @@ int main(int argc, char* argv[]) {
     //Have the main thread render too. 
     while (imageBlocks.Empty() == false) {
         //Process a block of the image. 
-        auto block = imageBlocks.Wait_And_Pop();
+        const EDX::Maths::Vector4i block = imageBlocks.Wait_And_Pop();
         render({ block.x, block.y }, { block.z, block.w });
     }
 
@@ -409,7 +415,7 @@ int main(int argc, char* argv[]) {
 
     //Report how long it took to render to the console. 
     const double render_time_s = pb.GetProgressTimer().Duration();
-    EDX::Log::Success("\nRender Complete in %.8fs.\n", render_time_s);
+    EDX::Log::Success("\nRender Complete in %.8fs.\nProcessed %d / %d pixels\n", render_time_s, pixelsProcessed.load(), img.Size());
 
     ExportImage(img, renderData.outputName);
 
@@ -420,7 +426,7 @@ int main(int argc, char* argv[]) {
 
 void ExportImage(const EDX::Image& img, const std::string& outputName, const float gamma)
 {
-    EDX::Log::Status("Exporting Render to PNG...\n");
+    EDX::Log::Status("Exporting %s to PNG...\n", outputName.empty() ? "Render" : outputName.c_str());
     std::filesystem::create_directory(OUTPUT_DIRECTORY);
 
     //Format the filename in relation to the output path. 

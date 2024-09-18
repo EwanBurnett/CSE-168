@@ -6,12 +6,15 @@
  * @author Ewan Burnett (EwanBurnettSK@Outlook.com)
  * @date 2024-08-26
 */
+#include "../Maths/Utils.h"
+#include "Timer.h"
+
 #include <cstdint>
 #include <cstdio> 
 #include <string>
 #include <mutex>
+#include <cstring> 
 
-#include "Timer.h"
 
 namespace EDX {
     class ProgressBar {
@@ -45,7 +48,7 @@ namespace EDX {
             //Exclusive access across threads via a mutex
             if (m_Lock.try_lock()) {
                 //Start the timer if necessary
-                if (m_Progress <= 0.0 + FLT_EPSILON) {
+                if (m_Progress <= 0.0 + Maths::Epsilon) {
                     m_Timer.Start();
                 }
 

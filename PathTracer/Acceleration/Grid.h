@@ -3,16 +3,17 @@
 
 #include "../Primitives/Primitive.h"
 #include "../Primitives/Box.h"
-#include <vector>
 
+#include "AccelStructure.h"
 
 namespace EDX {
 
     struct RenderData;
     namespace Acceleration {
-        class Grid {
+
+        class Grid : public AccelStructure {
         public:
-            Grid(); 
+            Grid();
             Grid(Maths::Vector3<uint32_t> dim);
 
             struct Cell {
@@ -21,12 +22,26 @@ namespace EDX {
             };
 
 
-            void BuildAccelerationStructure(EDX::RenderData& renderData);
+            void Build(EDX::RenderData& renderData) override;
+
+            bool Traverse(const EDX::Ray& ray, std::vector<RayHit>& results) const override;
+
             const std::vector<EDX::Acceleration::Grid::Cell>& GetCells() const;
 
         private:
+            int ConvertXYZToIndex(int x, int y, int z) const; 
+            Maths::Vector3i ConvertIndexToXYZ(int idx) const; 
+            int GetCellIndex(Maths::Vector3f point) const; 
+            Maths::Vector3i GetCellXYZ(Maths::Vector3f point) const; 
+
+        private:
             std::vector<EDX::Acceleration::Grid::Cell> m_Cells;
-            Maths::Vector3<uint32_t> m_Dimensions; 
+            Maths::Vector3<uint32_t> m_Dimensions;
+
+            Maths::Vector3f m_BoundsMin; 
+            Maths::Vector3f m_BoundsMax;
+
+            Maths::Vector3f m_CellSize;
         };
     }
 }
