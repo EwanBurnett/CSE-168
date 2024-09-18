@@ -6,34 +6,146 @@
 #include <fstream>
 #include <stack>
 #include <list>
+#include "Containers/TS_Stack.h"
+#include <thread>
+#include <atomic>
+#include <mutex> 
+#include "Utils/ProgressBar.h"
 
 
 constexpr bool g_ShowNormals = false;   //Displays surface normals. 
 constexpr bool g_ShowShadows = false;   //Highlights shadows in Red.
 
 
-EDX::Colour EDX::RayTracer::RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData)
+EDX::RayTracer::RayTracer()
 {
-    const Maths::Vector4i viewport = {
-        0, renderData.dimensions.x,
-        0, renderData.dimensions.y
-    };
-
-    Ray r = renderData.camera.GenRay(viewport, x, y);
-
-    EDX::Colour clr = { 0.0f, 0.0f, 0.0f, 1.0f };   //Output Pixel Colour - Black by default. 
-
-    clr = clr + RayColour(r, 0, renderData);
-
-    //Clamp the pixel colour to [0, 1]
-    clr.r = EDX::Maths::Clamp(clr.r, 0.0f, 1.0f);
-    clr.g = EDX::Maths::Clamp(clr.g, 0.0f, 1.0f);
-    clr.b = EDX::Maths::Clamp(clr.b, 0.0f, 1.0f);
-    clr.a = 1.0f;   //Ignore any transparency artifacts. 
-
-    return clr;
+    m_Settings.numThreads = std::thread::hardware_concurrency();
+    m_Settings.gridDim = { 1, 1, 1 };
+    m_Settings.blockDim = { 64, 64 }; 
 }
 
+EDX::RayTracer::~RayTracer()
+{
+}
+
+void EDX::RayTracer::Render(EDX::RenderData& renderData, EDX::Image& img)
+{
+    EDX::Log::Print("Image Size: (%d x %d)\nMax Depth: %d\nTriangles: %d\nSpheres: %d\nDirectional Lights: %d\nPoint Lights: %d\n", renderData.dimensions.x, renderData.dimensions.y, renderData.maxDepth, renderData.scene.Triangles().size(), renderData.scene.Spheres().size(), renderData.scene.DirectionalLights().size(), renderData.scene.PointLights().size());
+
+    renderData.accelGrid = EDX::Acceleration::Grid(m_Settings.gridDim);
+    renderData.accelGrid.Build(renderData);
+
+
+    EDX::Log::Status("Rendering Image \"%s\" \n", renderData.outputName.c_str());
+
+    EDX::ProgressBar pb;
+
+
+    //Render the Image
+    std::atomic<uint32_t> pixelsProcessed(0);
+    uint32_t totalPixels = img.Size();
+
+    auto render = [&](EDX::Maths::Vector2<int> dim_x, EDX::Maths::Vector2<int> dim_y)
+    {
+        for (uint32_t y = dim_y.x; y < dim_y.y; y++) {
+            for (uint32_t x = dim_x.x; x < dim_x.y; x++) {
+
+                const EDX::Colour pixelColour = EDX::RayTracer::RenderPixel(x, y, renderData);
+
+                img.SetPixel(x, y, pixelColour);
+                pixelsProcessed++;
+            }
+
+            //Only update the progress bar in the outer part of the loop, as it's SLOW. 
+            const float p = (float)(pixelsProcessed) / (float)(totalPixels);
+            pb.Update(p);
+        }
+    };
+
+
+    //Split the image into Blocks to process. 
+    const EDX::Maths::Vector2i blockDim = m_Settings.blockDim;
+
+    EDX::TS_Stack<EDX::Maths::Vector4i> imageBlocks;
+
+    const uint32_t blocks_y = (renderData.dimensions.y / blockDim.y);
+    const uint32_t remainder_x = renderData.dimensions.x % blockDim.x;
+
+    const uint32_t blocks_x = (renderData.dimensions.x / blockDim.x);
+    const uint32_t remainder_y = renderData.dimensions.y % blockDim.y;
+
+    for (uint32_t y = 0; y < blocks_y + 1; y++) {
+        for (uint32_t x = 0; x < blocks_x + 1; x++) {
+            //Compute each block size
+            const int x_min = EDX::Maths::Clamp((int)blockDim.x * (int)x, 0, (int)renderData.dimensions.x);
+            const int x_max = EDX::Maths::Clamp(x_min + blockDim.x, 0, (int)renderData.dimensions.x);
+            if (x_min == x_max) {
+                continue;
+            }
+
+            const int y_min = EDX::Maths::Clamp((int)blockDim.y * (int)y, 0, (int)renderData.dimensions.y);
+            const int y_max = EDX::Maths::Clamp(y_min + blockDim.y, 0, (int)renderData.dimensions.y);
+
+            if (y_min == y_max) {
+                continue;
+            }
+            EDX::Maths::Vector4i block = {  //TODO: convert Vec4i to Vec4<uint32_t>
+                x_min, x_max,   //xmin, xmax
+                y_min, y_max    //ymin, ymax
+            };
+
+
+            imageBlocks.Wait_And_Push(block);
+        }
+    }
+
+    EDX::Log::Print("Num Blocks: %d\nBlock Dimensions: %d x %d\n", imageBlocks.Size(), blockDim.x, blockDim.y);
+
+    //Kick off worker threads, each rendering sections of the image. 
+    const uint32_t num_threads = m_Settings.numThreads;
+    std::vector<std::thread> threads(num_threads - 1);  //Account for the main thread + (NUM_THREADS - 1) workers.
+
+    EDX::Log::Print("Processing on %d Threads.\n", num_threads);
+
+    for (int i = 1; i < num_threads; i++) {
+        threads[i - 1] = std::thread([&](int idx) {
+            while (imageBlocks.Empty() == false) {
+                //Process a block of the image. 
+                const EDX::Maths::Vector4i block = imageBlocks.Wait_And_Pop();
+                render({ block.x, block.y }, { block.z, block.w });
+            }
+
+            }, i);
+    }
+
+    //Have the main thread render too. 
+    while (imageBlocks.Empty() == false) {
+        //Process a block of the image. 
+        const EDX::Maths::Vector4i block = imageBlocks.Wait_And_Pop();
+        render({ block.x, block.y }, { block.z, block.w });
+    }
+
+
+    //Wait for the worker threads to complete.
+    uint32_t completeThreads = 0;
+    while (completeThreads < (num_threads - 1)) {
+        for (auto& t : threads) {
+            if (t.joinable()) {
+                t.join();
+                completeThreads++;
+            }
+        }
+    }
+
+    //Report how long it took to render to the console. 
+    const double render_time_s = pb.GetProgressTimer().Duration();
+    EDX::Log::Success("\nRender Complete in %.8fs.\nProcessed %d / %d pixels\n", render_time_s, pixelsProcessed.load(), img.Size());
+}
+
+EDX::RenderSettings& EDX::RayTracer::Settings()
+{
+    return m_Settings; 
+}
 
 EDX::Colour EDX::RayTracer::RayColour(const EDX::Ray ray, uint32_t depth, EDX::RenderData& renderData) {
 
@@ -174,6 +286,28 @@ EDX::Colour EDX::RayTracer::RayColour(const EDX::Ray ray, uint32_t depth, EDX::R
 
     return c;
 
+}
+
+EDX::Colour EDX::RayTracer::RenderPixel(const uint32_t x, const uint32_t y, EDX::RenderData& renderData)
+{
+    const Maths::Vector4i viewport = {
+        0, renderData.dimensions.x,
+        0, renderData.dimensions.y
+    };
+
+    Ray r = renderData.camera.GenRay(viewport, x, y);
+
+    EDX::Colour clr = { 0.0f, 0.0f, 0.0f, 1.0f };   //Output Pixel Colour - Black by default. 
+
+    clr = clr + RayColour(r, 0, renderData);
+
+    //Clamp the pixel colour to [0, 1]
+    clr.r = EDX::Maths::Clamp(clr.r, 0.0f, 1.0f);
+    clr.g = EDX::Maths::Clamp(clr.g, 0.0f, 1.0f);
+    clr.b = EDX::Maths::Clamp(clr.b, 0.0f, 1.0f);
+    clr.a = 1.0f;   //Ignore any transparency artifacts. 
+
+    return clr;
 }
 
 bool EDX::RayTracer::LoadSceneFile(const char* filePath, RenderData& renderData)
