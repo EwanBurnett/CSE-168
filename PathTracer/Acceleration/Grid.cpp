@@ -14,7 +14,7 @@ EDX::Acceleration::Grid::Grid()
 
 EDX::Acceleration::Grid::Grid(Maths::Vector3<uint32_t> dim)
 {
-    //TODO: Ensure Grid Dimensions are >= 1
+    //Ensure Grid Dimensions are >= 1
     m_Dimensions.x = Maths::Clamp(dim.x, 1u, UINT32_MAX);
     m_Dimensions.y = Maths::Clamp(dim.y, 1u, UINT32_MAX);
     m_Dimensions.z = Maths::Clamp(dim.z, 1u, UINT32_MAX);
@@ -98,7 +98,7 @@ void EDX::Acceleration::Grid::Build(EDX::RenderData& renderData) {
                         }
 
                         if (cell.intersections.size() > 0) {
-                            m_Cells.push_back(cell);    //TODO: Replace push_back with an array indexed write. 
+                            m_Cells.push_back(cell);
                         }
 
                     }

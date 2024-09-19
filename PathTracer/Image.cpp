@@ -21,8 +21,10 @@ uint32_t EDX::Image::Size() const
 
 void EDX::Image::SetPixel(const uint16_t x, const uint16_t y, Colour colour)
 {
+    m_Lock.lock_shared();   //Take shared ownership of the mutex
     const uint32_t idx = y * m_Dimensions.x + x;
     m_ImageData[idx] = colour;
+    m_Lock.unlock_shared(); 
 }
 
 EDX::Colour& EDX::Image::GetPixel(const uint16_t x, const uint16_t y)
@@ -31,11 +33,33 @@ EDX::Colour& EDX::Image::GetPixel(const uint16_t x, const uint16_t y)
     return m_ImageData[idx];
 }
 
+uint32_t EDX::Image::Width() const
+{
+    return m_Dimensions.x; 
+}
+
+uint32_t EDX::Image::Height() const
+{
+    return m_Dimensions.y; 
+}
+
 void EDX::Image::Clear(const Colour colour)
 {
+    m_Lock.lock(); 
     for (auto& pixel : m_ImageData) {
         pixel = colour;
     }
+    m_Lock.unlock(); 
+}
+
+const std::vector<EDX::Colour>& EDX::Image::GetPixels() const
+{
+    return m_ImageData;
+}
+
+std::shared_mutex& EDX::Image::Mutex()
+{
+    return m_Lock; 
 }
 
 void EDX::Image::ExportToPNG(const char* fileName, const float gamma) const

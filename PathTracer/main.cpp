@@ -17,7 +17,7 @@ constexpr uint16_t WIDTH = 600;
 constexpr uint16_t HEIGHT = 400;
 const char* OUTPUT_NAME = "Test";
 const char* OUTPUT_DIRECTORY = "Output";
-const char* SCENE_PATH = "Scenes/HW1/scene5.test";
+const char* SCENE_PATH = "Scenes/HW1/scene7.test";
 constexpr uint32_t MAX_DEPTH = 2;
 
 
@@ -33,17 +33,17 @@ int main(int argc, char* argv[]) {
 
 #if ENABLE_VIEWER
     EDX::Log::Status("Viewer Enabled.\n");
-    
+
     EDX::Viewer viewer;
 
-    viewer.Init(); 
+    viewer.Init();
 
     //TODO: When "Render" is pressed, Process it async to the viewer. 
-   auto worker = std::async([](const char* scenePath) {
+    auto worker = std::async([&](const char* path) {
         //Load the scene 
         EDX::RenderData renderData = {};
 
-        if (!EDX::RayTracer::LoadSceneFile(scenePath, renderData))
+        if (!EDX::RayTracer::LoadSceneFile(path, renderData))
         {
             EDX::Log::Failure("Failed to load scene!\n");
             return 1;
@@ -51,28 +51,31 @@ int main(int argc, char* argv[]) {
 
         EDX::RayTracer rayTracer;
         EDX::Image img(renderData.dimensions.x, renderData.dimensions.y);
+        viewer.SetImageHandle(&img); 
+
 
         //TODO: Configure via ImGui
-        rayTracer.Settings().numThreads = 1;// std::thread::hardware_concurrency();
-        rayTracer.Settings().gridDim = { 1, 1, 1 };
-        rayTracer.Settings().blockDim = { 64, 64 };
+        rayTracer.Settings().numThreads = std::thread::hardware_concurrency();
+        rayTracer.Settings().gridDim = { 5, 5, 5 };
+        rayTracer.Settings().blockDim = { 64,64 };
 
         rayTracer.Render(renderData, img);
 
         ExportImage(img, renderData.outputName);    //TODO: Reconfigure RenderData and RenderSettings
+        viewer.SetImageHandle(nullptr); 
         }, scenePath.c_str());
 
     while (viewer.PollEvents()) {
-        viewer.Update(); 
+        viewer.Update();
     }
 
-    viewer.Shutdown(); 
-    
+    viewer.Shutdown();
+
     //Wait for any pending renders to finish. 
     if (worker.valid()) {
-        worker.wait();  
+        worker.wait();
     }
-    
+
 #else
     //Load the scene 
     EDX::RenderData renderData = {};
@@ -88,12 +91,12 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    EDX::RayTracer rayTracer; 
+    EDX::RayTracer rayTracer;
     EDX::Image img(renderData.dimensions.x, renderData.dimensions.y);
 
-    rayTracer.Settings().numThreads = 2; 
+    rayTracer.Settings().numThreads = 2;
     rayTracer.Settings().gridDim = { 5, 5, 5 };
-    rayTracer.Render(renderData, img); 
+    rayTracer.Render(renderData, img);
 
     ExportImage(img, renderData.outputName);
 #endif
