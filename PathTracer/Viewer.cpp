@@ -32,6 +32,7 @@ void EDX::Viewer::Init()
         m_ImageIdx.resize(FRAMES_IN_FLIGHT);
         m_ImageBuffer = VK_NULL_HANDLE;
         m_ImageBufferSize = 0u;
+        m_Image = VK_NULL_HANDLE; 
     }
     CreateCommandObjects();
     CreateSyncPrimitives();
@@ -117,8 +118,8 @@ void EDX::Viewer::Update()
         if (m_ImageBuffer) {
             VkBufferImageCopy region = {};
             region.bufferOffset = 0;
-            region.bufferRowLength =  0;
-            region.bufferImageHeight =  0;
+            region.bufferRowLength = 0;
+            region.bufferImageHeight = 0;
             region.imageExtent.width = m_Engine.SwapchainExtents().width;
             region.imageExtent.height = m_Engine.SwapchainExtents().height;
             region.imageExtent.depth = 1;
@@ -129,14 +130,29 @@ void EDX::Viewer::Update()
                 1
             };
             region.imageOffset = {
-                0, 
-                0, 
-                0 
-            }; 
+                0,
+                0,
+                0
+            };
 
-            CmdTransitionImageLayout(cmd, m_Engine.SwapchainImages()[m_ImageIdx[idx]], m_Engine.SwapchainImageFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 0);
-            vkCmdCopyBufferToImage(cmd, m_ImageBuffer, m_Engine.SwapchainImages()[m_ImageIdx[idx]], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-            CmdTransitionImageLayout(cmd, m_Engine.SwapchainImages()[m_ImageIdx[idx]], m_Engine.SwapchainImageFormat(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, 0);
+            //TODO: buffered resource access
+            CmdTransitionImageLayout(cmd, m_Image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 0);
+            vkCmdCopyBufferToImage(cmd, m_ImageBuffer, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            CmdTransitionImageLayout(cmd, m_Image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, 0);
+
+            VkImageBlit blitRegion = {            };
+            blitRegion.srcSubresource = region.imageSubresource;
+            blitRegion.dstSubresource = region.imageSubresource;
+            blitRegion.srcOffsets[0] = { 0, 0, 0 };
+            blitRegion.srcOffsets[1] = { (int)m_Engine.SwapchainExtents().width, (int)m_Engine.SwapchainExtents().height,1 };
+            blitRegion.dstOffsets[0] = { 0, 0, 0 };
+            blitRegion.dstOffsets[1] = { (int)m_Engine.SwapchainExtents().width, (int)m_Engine.SwapchainExtents().height,1 }; 
+
+            vkCmdBlitImage(cmd, m_Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_Engine.SwapchainImages()[m_ImageIdx[idx]], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, &blitRegion, VK_FILTER_LINEAR);
+
+
+
+            //CmdTransitionImageLayout(cmd, m_Engine.SwapchainImages()[m_ImageIdx[idx]], m_Engine.SwapchainImageFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, 0);
         }
         vkEndCommandBuffer(cmd);
     }
@@ -149,7 +165,7 @@ void EDX::Viewer::SetImageHandle(EDX::Image* pImage)
     m_pImage = pImage;
 
     if (pImage == nullptr) {
-        return; 
+        return;
     }
 
     //If our current buffer is too small, realloc it.
@@ -158,10 +174,15 @@ void EDX::Viewer::SetImageHandle(EDX::Image* pImage)
         if (m_ImageBuffer != VK_NULL_HANDLE) {
             m_Engine.DestroyBuffer(m_ImageBuffer, m_ImageBufferAlloc);
         }
+        if (m_Image != VK_NULL_HANDLE) {
+            m_Engine.DestroyImage(m_Image, m_ImageAlloc);
+        }
 
         m_ImageBufferSize = imageSizeBytes;
 
         m_Engine.CreateBuffer(&m_ImageBuffer, &m_ImageBufferAlloc, m_ImageBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
+
+        m_Engine.CreateImage(&m_Image, &m_ImageAlloc, VK_IMAGE_TYPE_2D, { pImage->Width(), pImage->Height(), 1 }, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, 0);
     }
 }
 

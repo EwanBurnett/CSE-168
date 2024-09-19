@@ -56,8 +56,8 @@ int main(int argc, char* argv[]) {
 
         //TODO: Configure via ImGui
         rayTracer.Settings().numThreads = std::thread::hardware_concurrency();
-        rayTracer.Settings().gridDim = { 5, 5, 5 };
-        rayTracer.Settings().blockDim = { 64,64 };
+        rayTracer.Settings().gridDim = { 10, 10, 10 };
+        rayTracer.Settings().blockDim = { 32, 32 };
 
         rayTracer.Render(renderData, img);
 
@@ -80,11 +80,6 @@ int main(int argc, char* argv[]) {
     //Load the scene 
     EDX::RenderData renderData = {};
 
-    std::string scenePath = SCENE_PATH;
-    if (argc > 1) {
-        scenePath = argv[1];
-    }
-
     if (!EDX::RayTracer::LoadSceneFile(scenePath.c_str(), renderData))
     {
         EDX::Log::Failure("Failed to load scene!\n");
@@ -94,8 +89,8 @@ int main(int argc, char* argv[]) {
     EDX::RayTracer rayTracer;
     EDX::Image img(renderData.dimensions.x, renderData.dimensions.y);
 
-    rayTracer.Settings().numThreads = 2;
-    rayTracer.Settings().gridDim = { 5, 5, 5 };
+    rayTracer.Settings().numThreads = std::thread::hardware_concurrency();
+    rayTracer.Settings().gridDim = { 10, 10, 10 };
     rayTracer.Render(renderData, img);
 
     ExportImage(img, renderData.outputName);
