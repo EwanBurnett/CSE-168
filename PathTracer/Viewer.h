@@ -10,7 +10,7 @@
 namespace EDX {
     class Viewer {
     public:
-        void Init(); 
+        void Init(const uint32_t viewport_x, const uint32_t viewport_y); 
         void Shutdown(); 
 
         bool PollEvents(); 
@@ -45,6 +45,8 @@ namespace EDX {
         VkCommandPool m_CommandPool;
         std::vector<VkCommandBuffer> m_CommandBuffers; 
 
+
+        Maths::Vector2<uint32_t> m_ImageDim; 
 
         VkBuffer m_ImageBuffer;
         VkDeviceSize m_ImageBufferSize; 

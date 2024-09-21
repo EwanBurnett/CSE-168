@@ -4,16 +4,16 @@
 
 constexpr uint32_t FRAMES_IN_FLIGHT = 3u;
 
-void EDX::Viewer::Init()
+void EDX::Viewer::Init(const uint32_t viewport_x, const uint32_t viewport_y)
 {
     glfwInit();
-    m_Window.Create(640, 480, "Viewer");
+    m_Window.Create(viewport_x, viewport_y, "Viewer");
 
     //Initialize the Vulkan backend
     VkEngineInitInfo initInfo = {};
     {
         initInfo.enableDebugUtils = true;
-        initInfo.enableValidationLayers = true;
+        initInfo.enableValidationLayers = false;
         //initInfo.requestedDeviceExtensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
         initInfo.requestedDeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
@@ -29,10 +29,12 @@ void EDX::Viewer::Init()
 
     //Initialize Vulkan objects
     {
+        m_FrameIdx = 0;
         m_ImageIdx.resize(FRAMES_IN_FLIGHT);
         m_ImageBuffer = VK_NULL_HANDLE;
         m_ImageBufferSize = 0u;
-        m_Image = VK_NULL_HANDLE; 
+        m_Image = VK_NULL_HANDLE;
+        m_ImageDim = { 0, 0 };
     }
     CreateCommandObjects();
     CreateSyncPrimitives();
@@ -43,6 +45,10 @@ void EDX::Viewer::Init()
 void EDX::Viewer::Shutdown()
 {
     vkDeviceWaitIdle(m_Engine.Device());    //Wait for any GPU work to complete. 
+
+    m_Engine.DestroyBuffer(m_ImageBuffer, m_ImageBufferAlloc);
+    m_Engine.DestroyImage(m_Image, m_ImageAlloc); 
+
     DestroySyncPrimitives();
     DestroyCommandObjects();
 
@@ -80,10 +86,11 @@ void EDX::Viewer::Update()
     if (acc >= fixedUpdateRate) {
         //Log::Print("average dtms: %f\n", acc / (double)frameCounter); 
         //If a valid image is present, copy it to the swapchain. 
-        if (m_pImage)
+        if (m_pImage && m_Image && m_ImageAlloc)
         {
 
             //Copy Image data to a buffer
+            //TODO: Buffered Image Access
             if (m_ImageBuffer) {
                 uint64_t bufferSize = m_pImage->Size() * sizeof(EDX::Colour);
                 m_pImage->Mutex().lock();
@@ -115,13 +122,13 @@ void EDX::Viewer::Update()
         vkBeginCommandBuffer(cmd, &beginInfo);
 
 
-        if (m_ImageBuffer) {
+        if (m_ImageBuffer && m_Image && m_ImageAlloc) {
             VkBufferImageCopy region = {};
             region.bufferOffset = 0;
             region.bufferRowLength = 0;
             region.bufferImageHeight = 0;
-            region.imageExtent.width = m_Engine.SwapchainExtents().width;
-            region.imageExtent.height = m_Engine.SwapchainExtents().height;
+            region.imageExtent.width = m_ImageDim.x;
+            region.imageExtent.height = m_ImageDim.y;
             region.imageExtent.depth = 1;
             region.imageSubresource = {
                 VK_IMAGE_ASPECT_COLOR_BIT,
@@ -140,19 +147,23 @@ void EDX::Viewer::Update()
             vkCmdCopyBufferToImage(cmd, m_ImageBuffer, m_Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
             CmdTransitionImageLayout(cmd, m_Image, VK_FORMAT_R32G32B32A32_SFLOAT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1, 0);
 
-            VkImageBlit blitRegion = {            };
+            VkImageBlit blitRegion = {};
             blitRegion.srcSubresource = region.imageSubresource;
             blitRegion.dstSubresource = region.imageSubresource;
             blitRegion.srcOffsets[0] = { 0, 0, 0 };
-            blitRegion.srcOffsets[1] = { (int)m_Engine.SwapchainExtents().width, (int)m_Engine.SwapchainExtents().height,1 };
+            blitRegion.srcOffsets[1] = { (int)m_ImageDim.x, (int)m_ImageDim.y,1 };
             blitRegion.dstOffsets[0] = { 0, 0, 0 };
-            blitRegion.dstOffsets[1] = { (int)m_Engine.SwapchainExtents().width, (int)m_Engine.SwapchainExtents().height,1 }; 
+            blitRegion.dstOffsets[1] = { (int)m_Engine.SwapchainExtents().width, (int)m_Engine.SwapchainExtents().height, 1 };
 
-            vkCmdBlitImage(cmd, m_Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_Engine.SwapchainImages()[m_ImageIdx[idx]], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, &blitRegion, VK_FILTER_LINEAR);
+            //Blit the image to the swapchain 
+            //TODO: Upload to an intermediary texture, and present that in a renderpass.
+            CmdTransitionImageLayout(cmd, m_Engine.SwapchainImages()[m_ImageIdx[idx]], m_Engine.SwapchainImageFormat(), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, 0);
+            vkCmdBlitImage(cmd, m_Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_Engine.SwapchainImages()[m_ImageIdx[idx]], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
+            CmdTransitionImageLayout(cmd, m_Engine.SwapchainImages()[m_ImageIdx[idx]], m_Engine.SwapchainImageFormat(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, 0);
 
-
-
-            //CmdTransitionImageLayout(cmd, m_Engine.SwapchainImages()[m_ImageIdx[idx]], m_Engine.SwapchainImageFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, 0);
+        }
+        else {
+            CmdTransitionImageLayout(cmd, m_Engine.SwapchainImages()[m_ImageIdx[idx]], m_Engine.SwapchainImageFormat(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, 1, 0);  //Ensure the swapchain is in the correct format. 
         }
         vkEndCommandBuffer(cmd);
     }
@@ -178,6 +189,7 @@ void EDX::Viewer::SetImageHandle(EDX::Image* pImage)
             m_Engine.DestroyImage(m_Image, m_ImageAlloc);
         }
 
+        m_ImageDim = { m_pImage->Width(), m_pImage->Height() };
         m_ImageBufferSize = imageSizeBytes;
 
         m_Engine.CreateBuffer(&m_ImageBuffer, &m_ImageBufferAlloc, m_ImageBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);

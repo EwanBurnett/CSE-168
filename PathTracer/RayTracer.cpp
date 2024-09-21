@@ -104,7 +104,7 @@ void EDX::RayTracer::Render(EDX::RenderData& renderData, EDX::Image& img)
             }
         }
     }
-    EDX::Log::Print("Num Blocks: %d\nBlock Dimensions: %d x %d\n", imageBlocks.Size(), blockDim.x, blockDim.y);
+    EDX::Log::Print("Num Blocks: %d\nBlock Dimensions: %dpx x %dpx (%d pixels / block)\n", imageBlocks.Size(), blockDim.x, blockDim.y, blockDim.x * blockDim.y);
 
     //Kick off worker threads, each rendering sections of the image. 
     const uint32_t num_threads = (m_Settings.numThreads > 0) ? m_Settings.numThreads : 1;

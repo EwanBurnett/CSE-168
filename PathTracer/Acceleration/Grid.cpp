@@ -1,7 +1,7 @@
 #include "Grid.h"
 
 #include "../Utils/Logger.h"
-#include "../Utils/Timer.h"
+#include "../Utils/ProgressBar.h"
 #include "../Maths.h"
 
 #include "../RenderData.h"
@@ -22,8 +22,7 @@ EDX::Acceleration::Grid::Grid(Maths::Vector3<uint32_t> dim)
 
 void EDX::Acceleration::Grid::Build(EDX::RenderData& renderData) {
     EDX::Log::Status("Building Grid Acceleration Structure.\nDimensions: [%d x %d x %d]\n", m_Dimensions.x, m_Dimensions.y, m_Dimensions.z);
-    EDX::Timer timer;
-    timer.Start();
+    EDX::ProgressBar pb;
     {
         m_BoundsMin.Set(0.0f);
         m_BoundsMax.Set(0.0f);
@@ -70,6 +69,8 @@ void EDX::Acceleration::Grid::Build(EDX::RenderData& renderData) {
             //m_Cells.resize(gridDimensions.x * gridDimensions.y * gridDimensions.z);
 
             //TODO: Multithreaded Acceleration Structure Generation
+            std::atomic<uint64_t> cellsProcessed = 0;
+
             for (int z = 0; z < gridDimensions.z; z++) {
                 for (int y = 0; y < gridDimensions.y; y++) {
                     for (int x = 0; x < gridDimensions.x; x++) {
@@ -101,6 +102,9 @@ void EDX::Acceleration::Grid::Build(EDX::RenderData& renderData) {
                             m_Cells.push_back(cell);
                         }
 
+                        cellsProcessed++;
+                        const uint64_t numCells = gridDimensions.x * gridDimensions.y * gridDimensions.z;
+                        pb.Update((float)(cellsProcessed) / (float)(numCells));
                     }
                 }
             }
@@ -108,10 +112,12 @@ void EDX::Acceleration::Grid::Build(EDX::RenderData& renderData) {
 
 
     }
-    timer.Tick();
-    float dtms = timer.DeltaTime();
 
-    EDX::Log::Success("Finished building acceleration structures in %fs.\n", dtms);
+    float dtms = pb.GetProgressTimer().DeltaTime();
+
+    EDX::Log::Success("\nFinished building acceleration structures in %fs.\n", dtms);
+    const uint64_t numCells = m_Dimensions.x * m_Dimensions.y * m_Dimensions.z;
+    EDX::Log::Print("Passed Cell Count: %d / %d\n", m_Cells.size(), numCells);
 
 }
 

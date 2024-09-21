@@ -13,8 +13,8 @@
 #include "Viewer.h"
 #endif
 
-constexpr uint16_t WIDTH = 600;
-constexpr uint16_t HEIGHT = 400;
+constexpr uint16_t WIDTH = 1280;
+constexpr uint16_t HEIGHT = 720;
 const char* OUTPUT_NAME = "Test";
 const char* OUTPUT_DIRECTORY = "Output";
 const char* SCENE_PATH = "Scenes/HW1/scene7.test";
@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
 
     EDX::Viewer viewer;
 
-    viewer.Init();
+    viewer.Init(WIDTH, HEIGHT);
 
     //TODO: When "Render" is pressed, Process it async to the viewer. 
     auto worker = std::async([&](const char* path) {
@@ -56,8 +56,8 @@ int main(int argc, char* argv[]) {
 
         //TODO: Configure via ImGui
         rayTracer.Settings().numThreads = std::thread::hardware_concurrency();
-        rayTracer.Settings().gridDim = { 10, 10, 10 };
-        rayTracer.Settings().blockDim = { 32, 32 };
+        rayTracer.Settings().gridDim = { 8, 8, 5 };
+        rayTracer.Settings().blockDim = { 16, 16 };
 
         rayTracer.Render(renderData, img);
 
